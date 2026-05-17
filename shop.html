@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Silly Stitches Shop — Browse all handmade pieces." />
+  <title>Shop — Silly Stitches</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="images/logo.jpeg" />
+</head>
+<body>
+
+  <!-- ============================
+       NAVIGATION
+       ============================ -->
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="navbar-inner">
+
+      <a href="index.html" class="navbar-logo" aria-label="Silly Stitches Home">
+        <div class="logo-icon"><img src="images/logo.jpeg" alt="Silly Stitches logo" /></div>
+        <span class="logo-text">Silly Stitches</span>
+      </a>
+
+      <ul class="navbar-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="shop.html" class="active">Shop</a></li>
+        <li><a href="order.html" class="navbar-cta">✦ Order Now ✦</a></li>
+      </ul>
+
+      <button class="navbar-toggle" id="navToggle" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+    </div>
+  </nav>
+
+
+  <!-- ============================
+       PAGE HERO
+       ============================ -->
+  <header class="page-hero">
+    <h1 class="section-title">✦ The Shop ✦</h1>
+    <p>Browse every handmade piece — each one stitched with patience and care.</p>
+  </header>
+
+
+  <!-- ============================
+       SHOP GRID
+       ============================ -->
+  <section class="shop-section" aria-labelledby="shop-title">
+    <div class="container">
+
+      <!-- Filter buttons -->
+      <div class="shop-filter" role="group" aria-label="Product categories">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="Make-up Bags">Make-up Bags</button>
+        <button class="filter-btn" data-filter="Tote Bags">Tote Bags</button>
+      </div>
+
+      <div class="shop-grid">
+
+        <!--
+          =============================================
+          HOW TO ADD / EDIT PRODUCTS:
+          ─────────────────────────────────────────────
+          1. Copy any <article class="product-card"> block.
+          2. Paste it into this grid.
+          3. Edit: product name, price, description, image src.
+          4. Remove <span class="product-badge"> if no badge needed.
+          5. Update the href on the Order button to pre-fill
+             the product name:
+             order.html?product=Your+Product+Name
+          =============================================
+        -->
+
+
+        <!-- ── PRODUCT 1 ── -->
+        <article class="product-card reveal" data-product="Large Baby Blue Floral Make-up Bag" data-category="Make-up Bags">
+          <div class="product-image">
+            <span class="product-badge">New</span>
+            <!--
+              REPLACE IMAGE: product photo, square recommended (600×600px)
+            -->
+            <img
+              src="images/Bee Bag 1.JPG"
+              alt="Large Baby Blue Floral Make-up Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Large Baby Blue Floral Make-up Bag</h2>
+            <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around. Loved by people (and bees) everywhere!</p>
+            <div class="product-footer">
+              <span class="product-price">R250.00</span>
+              <a href="order.html?product=Large+Baby+Blue+Floral+Make-up+Bag" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ── PRODUCT 2 ── -->
+        <article class="product-card reveal" data-product="Large Pink Floral Make-up Bag" data-category="Make-up Bags">
+          <div class="product-image">
+            <!--
+              REPLACE IMAGE: product photo
+            -->
+            <img
+              src="images/Pink Large Front Down.JPG"
+              alt="Large Pink Floral Make-up Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Large Pink Floral Make-up Bag</h2>
+            <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around. Fabric designed, woven and printed in South Africa!</p>
+            <div class="product-footer">
+              <span class="product-price">R250.00 </span>
+              <a href="order.html?product=Large+Pink+Floral+Make-up+Bag" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ── PRODUCT 3 ── -->
+        <article class="product-card reveal" data-product="Large White Floral Make-up Bag" data-category="Make-up Bags">
+          <div class="product-image">
+            <span class="product-badge">Bestseller</span>
+            <!--
+              REPLACE IMAGE: product photo
+            -->
+            <img
+              src="images/Green&White Open Oblique.JPG"
+              alt="Large White Floral Make-up Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Large White Floral Make-up Bag</h2>
+            <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around. My personal favorite!</p>
+            <div class="product-footer">
+              <span class="product-price">R250.00</span>
+              <a href="order.html?product=Large+White+Floral+Make-up+Bag" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ── PRODUCT 4 ── -->
+        <article class="product-card reveal" data-product="Large Dark Blue Floral Make-up Bag" data-category="Make-up Bags">
+          <div class="product-image">
+            <span class="product-badge">Limited</span>
+            <!--
+              REPLACE IMAGE: product photo
+            -->
+            <img
+              src="images/Dark Blue Oblique.JPG"
+              alt="Large Dark Blue Floral Make-up Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Large Dark Blue Floral Make-up Bag</h2>
+            <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around.</p>
+            <div class="product-footer">
+              <span class="product-price">R250.00</span>
+              <a href="order.html?product=Large+Dark+Blue+Floral+Make-up+Bag" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+
+        <!-- ── PRODUCT 5 ── -->
+        <article class="product-card reveal" data-product="Large Dark Green Floral Make-up Bag" data-category="Make-up Bags">
+          <div class="product-image">
+            <span class="product-badge">Limited</span>
+            <!--
+              REPLACE IMAGE: product photo
+            -->
+            <img
+              src="https://images.unsplash.com/photo-1559521783-1d1599583485?w=600&q=80"
+              alt="Large Dark Green Floral Make-up Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Large Dark Green Floral Make-up Bag</h2>
+            <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around.</p>
+            <div class="product-footer">
+              <span class="product-price">R250.00</span>
+              <a href="order.html?product=Large+Dark+Green+Floral+Make-up+Bag" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- ── PRODUCT 6 ── -->
+        <article class="product-card reveal" data-product="Blue Bird Tote Bag" data-category="Tote Bags">
+          <div class="product-image">
+            <span class="product-badge">Limited</span>
+            <!--
+              REPLACE IMAGE: product photo
+            -->
+            <img
+              src="https://images.unsplash.com/photo-1559521783-1d1599583485?w=600&q=80"
+              alt="Blue Bird Tote Bag"
+              loading="lazy"
+            />
+          </div>
+          <div class="product-info">
+            <h2 class="product-name">Blue Bird Tote Bag</h2>
+            <p class="product-desc"></p>
+            <div class="product-footer">
+              <span class="product-price">R?</span>
+              <a href="order.html?product=Floral+Tea+Towel" class="btn btn-outline product-order-btn">Order</a>
+            </div>
+          </div>
+        </article>
+
+        <!-- ──────────────────────────────────────────
+             ADD MORE PRODUCTS HERE by copying a card block above!
+             ────────────────────────────────────────── -->
+
+      </div><!-- /.shop-grid -->
+
+      <!-- Custom order callout -->
+      <div style="
+        margin-top: 64px;
+        background: var(--pink-soft);
+        border: 1.5px solid var(--pink-mid);
+        border-radius: var(--radius-lg);
+        padding: 44px 48px;
+        text-align: center;
+        max-width: 640px;
+        margin-left: auto;
+        margin-right: auto;
+      ">
+        <p style="font-size: 1.5rem; margin-bottom: 8px;">💌</p>
+        <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: var(--text-dark); margin-bottom: 12px;">
+          Don't see what you're looking for?
+        </h2>
+        <p style="color: var(--text-mid); font-weight: 500; margin-bottom: 28px; font-size: 0.97rem;">
+          I love custom orders! Tell me your colours, size, and vision — I'll bring it to life.
+        </p>
+        <a href="order.html" class="btn btn-primary">Request a Custom Order</a>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ============================
+       FOOTER
+       ============================ -->
+  <footer class="footer" role="contentinfo">
+    <div class="footer-inner">
+
+      <div class="footer-brand">
+        <span class="logo-text display-font">Silly Stitches</span>
+        <p>Slow-made, handcrafted textile goods made with love in a cozy little studio.
+          Every purchase supports independent craft.</p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Navigate</h4>
+        <ul>
+          <li><a href="index.html">Home</a></li>
+          <li><a href="shop.html">Shop</a></li>
+          <li><a href="order.html">Place an Order</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Info</h4>
+        <ul>
+          <!-- REPLACE: update with your real contact info -->
+          <li><a href="mailto:hello@sillystitches.com">E-mail</a></li>
+          <li><a href="https://www.instagram.com/sillystitches.za" target="_blank" rel="noopener noreferrer">Instagram</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2025 Silly Stitches. All rights reserved.</span>
+      <span>Made with <span class="footer-heart">♥</span> by hand</span>
+    </div>
+  </footer>
+
+  <script src="products.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

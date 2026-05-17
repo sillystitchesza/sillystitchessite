@@ -1,0 +1,810 @@
+/**
+ * script.js — Silly Stitches
+ * ─────────────────────────────────────────────────────────────
+ * Minimal vanilla JS for:
+ *   1. Mobile navigation toggle
+ *   2. Scroll-triggered "reveal" animations
+ *   3. Order form: validation, submission, and feedback
+ *   4. Order page: pre-fill product from URL query param
+ *   5. Shop page: filter button active state (visual only)
+ * ─────────────────────────────────────────────────────────────
+ */
+
+/* ============================================================
+   1. MOBILE NAVIGATION TOGGLE
+   ============================================================ */
+(function initNav() {
+  const toggle = document.getElementById('navToggle');
+  const links  = document.getElementById('navLinks');
+
+  if (!toggle || !links) return;
+
+  toggle.addEventListener('click', () => {
+    const isOpen = links.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', String(isOpen));
+
+    // Animate hamburger bars into an X
+    const bars = toggle.querySelectorAll('span');
+    if (isOpen) {
+      bars[0].style.transform = 'translateY(7px) rotate(45deg)';
+      bars[1].style.opacity   = '0';
+      bars[2].style.transform = 'translateY(-7px) rotate(-45deg)';
+    } else {
+      bars[0].style.transform = '';
+      bars[1].style.opacity   = '';
+      bars[2].style.transform = '';
+    }
+  });
+
+  // Close menu when a link is clicked
+  links.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      links.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      const bars = toggle.querySelectorAll('span');
+      bars[0].style.transform = '';
+      bars[1].style.opacity   = '';
+      bars[2].style.transform = '';
+    });
+  });
+})();
+
+
+/* ============================================================
+   2. SCROLL REVEAL ANIMATION
+   Adds class "visible" to elements with class "reveal"
+   when they enter the viewport.
+   ============================================================ */
+(function initScrollReveal() {
+  const revealEls = document.querySelectorAll('.reveal');
+  if (!revealEls.length) return;
+
+  // Stagger delay for grid items
+  revealEls.forEach((el, i) => {
+    // Apply a stagger of 0–200ms based on position in a 3-column grid
+    const delay = (i % 3) * 80;
+    el.style.transitionDelay = `${delay}ms`;
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target); // animate once only
+        }
+      });
+    },
+    {
+      threshold: 0.12,
+      rootMargin: '0px 0px -40px 0px'
+    }
+  );
+
+  revealEls.forEach(el => observer.observe(el));
+})();
+
+
+/* ============================================================
+   3. ORDER FORM — Validation & AJAX Submission
+   ============================================================ */
+(function initOrderForm() {
+  const form       = document.getElementById('orderForm');
+  if (!form) return;
+
+  const submitBtn  = document.getElementById('submitBtn');
+  const successMsg = document.getElementById('successMsg');
+  const errorMsg   = document.getElementById('errorMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault(); // prevent native form submit
+
+    // ── Client-side validation ──
+    if (!validateForm(form)) return;
+
+    // ── UI: loading state ──
+    submitBtn.textContent = 'Sending…';
+    submitBtn.disabled    = true;
+    successMsg.style.display = 'none';
+    errorMsg.style.display   = 'none';
+
+    try {
+      /*
+       * Encode form data as application/x-www-form-urlencoded
+       * This is what the Cloudflare Worker expects.
+       */
+      const data = new URLSearchParams(new FormData(form)).toString();
+
+      const response = await fetch(form.action, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body:    data,
+      });
+
+      if (response.ok) {
+        // ── Success ──
+        successMsg.style.display = 'block';
+        form.reset();
+
+        // Scroll to success message
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        throw new Error(`Server responded with status ${response.status}`);
+      }
+
+    } catch (err) {
+      // ── Error ──
+      console.error('Order submission error:', err);
+      errorMsg.style.display = 'block';
+    } finally {
+      // Restore button
+      submitBtn.textContent = 'Send My Order ✦';
+      submitBtn.disabled    = false;
+    }
+  });
+
+  /**
+   * Simple inline validation — highlights empty required fields.
+   * Returns true if valid, false if not.
+   */
+  function validateForm(form) {
+    let valid = true;
+
+    form.querySelectorAll('[required]').forEach(field => {
+      // Clear previous error styles
+      field.style.borderColor = '';
+      field.style.boxShadow   = '';
+
+      const value = field.value.trim();
+
+      if (!value) {
+        markInvalid(field, 'This field is required.');
+        valid = false;
+      } else if (field.type === 'email' && !isValidEmail(value)) {
+        markInvalid(field, 'Please enter a valid email address.');
+        valid = false;
+      } else if (field.type === 'number' && (parseInt(value) < 1 || parseInt(value) > 20)) {
+        markInvalid(field, 'Quantity must be between 1 and 20.');
+        valid = false;
+      }
+    });
+
+    return valid;
+  }
+
+  function markInvalid(field, message) {
+    field.style.borderColor = 'var(--red-muted)';
+    field.style.boxShadow   = '0 0 0 4px rgba(196,112,106,0.2)';
+    field.focus();
+
+    // Clear error styling on next input
+    field.addEventListener('input', () => {
+      field.style.borderColor = '';
+      field.style.boxShadow   = '';
+    }, { once: true });
+  }
+
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+})();
+
+
+/* ============================================================
+   4. PRE-FILL PRODUCT FROM URL QUERY PARAM
+   Allows shop links like: order.html?product=Cream+Market+Bag
+   to pre-select the matching option in the product dropdown.
+   ============================================================ */
+(function prefillProductFromURL() {
+  const select = document.getElementById('product');
+  if (!select) return;
+
+  const params      = new URLSearchParams(window.location.search);
+  const productName = params.get('product');
+  if (!productName) return;
+
+  // Try to match the option value (case-insensitive)
+  const options = Array.from(select.options);
+  const match   = options.find(opt =>
+    opt.value.toLowerCase() === productName.toLowerCase()
+  );
+
+  if (match) {
+    select.value = match.value;
+  }
+})();
+
+
+/* ============================================================
+   5. SHOP FILTER BUTTONS — functional category filtering
+   ─────────────────────────────────────────────────────────────
+   Each button carries a data-filter="…" value that is matched
+   against data-category="…" on every .product-card.
+
+   "all" → show every card.
+   Any other value → hide cards whose data-category doesn't match.
+
+   Cards are shown/hidden via the .card-hidden class (CSS handles
+   the visual transition). The count of visible results is shown
+   in #filterCount, which is injected once below the buttons.
+   ============================================================ */
+(function initFilterButtons() {
+  const filterBtns = document.querySelectorAll('.filter-btn[data-filter]');
+  if (!filterBtns.length) return;
+
+  const cards = document.querySelectorAll('.product-card[data-category]');
+  if (!cards.length) return;
+
+  // Inject a small live count beneath the filter bar
+  const filterBar = document.querySelector('.shop-filter');
+  const countEl   = document.createElement('p');
+  countEl.id        = 'filterCount';
+  countEl.className = 'filter-count';
+  filterBar.insertAdjacentElement('afterend', countEl);
+
+  function applyFilter(value) {
+    let visible = 0;
+    cards.forEach(card => {
+      const match = value === 'all' || card.dataset.category === value;
+      card.classList.toggle('card-hidden', !match);
+      if (match) visible++;
+    });
+
+    // Update count text — hide it on "all" since it's obvious
+    if (value === 'all') {
+      countEl.textContent = '';
+    } else {
+      const label = filterBtns[
+        [...filterBtns].findIndex(b => b.dataset.filter === value)
+      ].textContent;
+      countEl.textContent = `${visible} product${visible !== 1 ? 's' : ''} in ${label}`;
+    }
+  }
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyFilter(btn.dataset.filter);
+    });
+  });
+
+  // Run once on load to reflect the default "active" button
+  const initial = document.querySelector('.filter-btn.active[data-filter]');
+  if (initial) applyFilter(initial.dataset.filter);
+})();
+
+
+/* ============================================================
+   ╔══════════════════════════════════════════════════════════╗
+   ║  NEW SECTIONS (6 – 9) — Image galleries                  ║
+   ║  All data comes from window.SILLY_STITCHES_PRODUCTS      ║
+   ║  defined in products.js                                  ║
+   ╚══════════════════════════════════════════════════════════╝
+   ============================================================ */
+
+/* Tiny shared helper — look up a product's image array, or [] */
+function _getProductImages(name) {
+  const data = window.SILLY_STITCHES_PRODUCTS;
+  if (!data || !data.products || !name) return [];
+  return data.products[name] || [];
+}
+
+
+/* ============================================================
+   6. HERO IMAGE CAROUSEL
+   ─────────────────────────────────────────────────────────────
+   Rotates through hero.images at hero.intervalMs.
+   Supports two animations: 'flip' (card flip on Y axis) or
+   'fade' (crossfade). Falls back gracefully if products.js is
+   missing or has 0/1 images — leaves the existing <img> alone.
+   ============================================================ */
+(function initHeroCarousel() {
+  const wrap = document.querySelector('.hero-image-wrap');
+  if (!wrap) return; // not on a page that has a hero
+
+  const data = window.SILLY_STITCHES_PRODUCTS && window.SILLY_STITCHES_PRODUCTS.hero;
+  if (!data || !Array.isArray(data.images) || data.images.length < 2) return;
+
+  // Inherit alt text from the existing <img> for accessibility
+  const existing = wrap.querySelector('img');
+  const altText  = existing ? existing.alt : 'Hero image';
+
+  // Rebuild contents — one <img> per source, stacked
+  wrap.innerHTML = '';
+  wrap.classList.add('hero-carousel');
+  if (data.animation === 'flip') wrap.classList.add('anim-flip');
+  else                            wrap.classList.add('anim-fade');
+
+  data.images.forEach((src, i) => {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = altText;
+    img.loading = i === 0 ? 'eager' : 'lazy';
+    if (i === 0) img.classList.add('active');
+    wrap.appendChild(img);
+  });
+
+  const imgs = wrap.querySelectorAll('img');
+  let current = 0;
+
+  function advance() {
+    const next    = (current + 1) % imgs.length;
+    const cur     = imgs[current];
+    const nextImg = imgs[next];
+
+    if (data.animation === 'flip') {
+      // Card-flip: shrink current to edge, then bring next back
+      cur.classList.add('flipping-out');
+      setTimeout(() => {
+        cur.classList.remove('active', 'flipping-out');
+        nextImg.classList.add('active', 'flipping-in');
+        // Force reflow so the entry animation plays
+        void nextImg.offsetWidth;
+        nextImg.classList.remove('flipping-in');
+      }, 350);
+    } else {
+      // Plain crossfade
+      cur.classList.remove('active');
+      nextImg.classList.add('active');
+    }
+    current = next;
+  }
+
+  setInterval(advance, data.intervalMs || 4500);
+})();
+
+
+/* ============================================================
+   7. PRODUCT CARD HOVER SLIDESHOW
+   ─────────────────────────────────────────────────────────────
+   For each .product-card that has a data-product matching an
+   entry in products.js, this preloads all images and stacks
+   them inside .product-image. On hover, they cycle every ~900ms
+   with a soft crossfade. On mouseleave we return to image 0.
+   Cards with only one image are skipped for rotation, but
+   still get the click-to-lightbox behaviour.
+   ============================================================ */
+(function initProductCardCarousels() {
+  const cards = document.querySelectorAll('.product-card[data-product]');
+  if (!cards.length) return;
+
+  cards.forEach(card => {
+    const name   = card.getAttribute('data-product');
+    const images = _getProductImages(name);
+    if (!images.length) return;
+
+    const imageBox = card.querySelector('.product-image');
+    if (!imageBox) return;
+
+    /* ── Single-image product ──────────────────────────
+       Don't restructure anything. Just enable click-to-
+       zoom on the existing <img>. */
+    if (images.length < 2) {
+      imageBox.style.cursor = 'zoom-in';
+      imageBox.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) return;
+        window.SillyStitchesLightbox.open(images, 0, name);
+      });
+      return;
+    }
+
+    /* ── Multi-image product — build carousel ─────────── */
+
+    // Preserve any badge (e.g. "New") so it stays on top
+    const badge = imageBox.querySelector('.product-badge');
+
+    // Capture original alt text from existing <img>
+    const origImg = imageBox.querySelector('img');
+    const altText = origImg ? origImg.alt : name;
+
+    // Wipe old <img> tags (keep the badge)
+    imageBox.querySelectorAll('img').forEach(el => el.remove());
+    imageBox.classList.add('has-carousel');
+    if (badge && !imageBox.contains(badge)) imageBox.appendChild(badge);
+
+    // Stack the new images, only the first is .active
+    images.forEach((src, i) => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = altText;
+      img.loading = i === 0 ? 'eager' : 'lazy';
+      img.className = 'carousel-layer' + (i === 0 ? ' active' : '');
+      imageBox.appendChild(img);
+    });
+
+    // Track which image is showing (used by hover-cycle + click-to-zoom)
+    let idx = 0;
+
+    // Click → open lightbox at whatever image is currently visible
+    imageBox.style.cursor = 'zoom-in';
+    imageBox.addEventListener('click', (e) => {
+      if (e.target.closest('a, button')) return;
+      window.SillyStitchesLightbox.open(images, idx, name);
+    });
+
+    const layers = imageBox.querySelectorAll('.carousel-layer');
+    let timer = null;
+
+    function show(i) {
+      layers[idx].classList.remove('active');
+      idx = i % layers.length;
+      layers[idx].classList.add('active');
+    }
+
+    card.addEventListener('mouseenter', () => {
+      timer = setInterval(() => show(idx + 1), 900);
+    });
+    card.addEventListener('mouseleave', () => {
+      clearInterval(timer);
+      show(0);
+    });
+  });
+})();
+
+
+/* ============================================================
+   8. LIGHTBOX MODAL
+   ─────────────────────────────────────────────────────────────
+   A single full-screen viewer injected once into <body>.
+   Exposed globally as window.SillyStitchesLightbox.open(images,
+   startIndex, title). Supports:
+   • Dot indicators across the TOP (above the image)
+   • Click-left / click-right halves of the image to navigate
+   • Outer ‹ › side buttons
+   • Keyboard ← → Esc navigation
+   • Click-outside to close
+   ============================================================ */
+(function initLightbox() {
+  const overlay = document.createElement('div');
+  overlay.className = 'ss-lightbox';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  // ── DOM order: close · dots (TOP) · outer side buttons · stage ──
+  // The flex-direction:column on .ss-lightbox stacks them vertically.
+  // Dots come BEFORE the stage so they render above the image.
+  overlay.innerHTML = `
+    <button class="ss-lb-close" aria-label="Close gallery">&times;</button>
+    <button class="ss-lb-prev"  aria-label="Previous image">&lsaquo;</button>
+    <button class="ss-lb-next"  aria-label="Next image">&rsaquo;</button>
+
+    <div class="ss-lb-dots" role="tablist"></div>
+
+    <figure class="ss-lb-stage">
+      <div class="ss-lb-img-wrap">
+        <img class="ss-lb-img" alt="" />
+        <!--
+          LEFT / RIGHT click zones — transparent overlays that sit
+          on each half of the image. They show a subtle gradient +
+          arrow on hover so the user discovers they're clickable.
+          tabindex="-1" keeps them out of the tab order since the
+          outer ‹ › buttons already handle keyboard users.
+        -->
+        <button class="ss-lb-zone ss-lb-zone-l" tabindex="-1"
+                aria-hidden="true"></button>
+        <button class="ss-lb-zone ss-lb-zone-r" tabindex="-1"
+                aria-hidden="true"></button>
+      </div>
+      <figcaption class="ss-lb-caption"></figcaption>
+    </figure>
+  `;
+  document.body.appendChild(overlay);
+
+  const imgEl     = overlay.querySelector('.ss-lb-img');
+  const captionEl = overlay.querySelector('.ss-lb-caption');
+  const dotsEl    = overlay.querySelector('.ss-lb-dots');
+  const prevBtn   = overlay.querySelector('.ss-lb-prev');
+  const nextBtn   = overlay.querySelector('.ss-lb-next');
+  const closeBtn  = overlay.querySelector('.ss-lb-close');
+  const zoneL     = overlay.querySelector('.ss-lb-zone-l');
+  const zoneR     = overlay.querySelector('.ss-lb-zone-r');
+
+  let state = { images: [], idx: 0, title: '' };
+
+  function render() {
+    imgEl.src = state.images[state.idx];
+    imgEl.alt = `${state.title} — image ${state.idx + 1} of ${state.images.length}`;
+    captionEl.textContent = state.images.length > 1
+      ? `${state.title} · ${state.idx + 1} / ${state.images.length}`
+      : state.title;
+
+    const multi = state.images.length > 1;
+    // Outer side buttons + image click zones — hidden for single images
+    prevBtn.style.display  = multi ? '' : 'none';
+    nextBtn.style.display  = multi ? '' : 'none';
+    dotsEl.style.display   = multi ? '' : 'none';
+    zoneL.style.display    = multi ? '' : 'none';
+    zoneR.style.display    = multi ? '' : 'none';
+
+    // Re-render dot indicators
+    dotsEl.innerHTML = '';
+    if (multi) {
+      state.images.forEach((_, i) => {
+        const d = document.createElement('button');
+        d.className = 'ss-lb-dot' + (i === state.idx ? ' active' : '');
+        d.setAttribute('aria-label', `Go to image ${i + 1}`);
+        d.addEventListener('click', () => { state.idx = i; render(); });
+        dotsEl.appendChild(d);
+      });
+    }
+  }
+
+  function open(images, startIndex, title) {
+    if (!images || !images.length) return;
+    state = { images, idx: startIndex || 0, title: title || '' };
+    render();
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+  function next() { state.idx = (state.idx + 1) % state.images.length; render(); }
+  function prev() { state.idx = (state.idx - 1 + state.images.length) % state.images.length; render(); }
+
+  prevBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+  zoneL.addEventListener('click', prev);   // left half of image → previous
+  zoneR.addEventListener('click', next);   // right half of image → next
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', (e) => {
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape')     close();
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft')  prev();
+  });
+
+  window.SillyStitchesLightbox = { open, close };
+})();
+
+
+/* ============================================================
+   9. ORDER PAGE — MULTI-ITEM ROWS, PRODUCT PREVIEW & TOTAL
+   ─────────────────────────────────────────────────────────────
+   Manages the dynamic item list (#orderItemsList), the image
+   preview strip (#orderProductPreview), and the live price
+   total (#orderTotal).
+
+   ROW MANAGEMENT
+   • "+ Add another item" clones the first row's <select> options
+     into a fresh row appended to #orderItemsList.
+   • Each row's × button removes it (min 1 row always remains).
+   • The × on the ONLY row is hidden via the .single-row class.
+
+   PREVIEW STRIP
+   • Shows one thumbnail per row — always image #1 from products.js.
+   • If quantity > 1, a small badge "×N" appears on the thumbnail.
+   • Clicking any thumbnail opens the lightbox for that product.
+
+   ORDER TOTAL
+   • Reads prices from window.SILLY_STITCHES_PRODUCTS.prices.
+   • Fixed prices → multiplied by qty, summed.
+   • "From" prices → same, but total is flagged as "from R…".
+   • null price (custom/POA) → line shows "price on request",
+     total shows "to be confirmed".
+   • Hidden until at least one product is selected.
+
+   All three rebuild together whenever a select changes, a qty
+   changes, a row is added, or a row is removed.
+   ============================================================ */
+(function initOrderItems() {
+  const list      = document.getElementById('orderItemsList');
+  const addBtn    = document.getElementById('addItemBtn');
+  const host      = document.getElementById('orderProductPreview');
+  const totalHost = document.getElementById('orderTotal');
+  if (!list || !addBtn || !host) return; // only runs on order page
+
+  // ── Snapshot of the options HTML from the static first row.
+  //    Used when creating every subsequent row so the product list
+  //    stays in one place (the HTML) and is never duplicated.
+  const optionsHTML = list.querySelector('select').innerHTML;
+
+  // ── PRICE LOOKUP ─────────────────────────────────────────────
+  // Returns the price entry from products.js for a given name,
+  // or undefined if not found.
+  function getPrice(name) {
+    const data = window.SILLY_STITCHES_PRODUCTS;
+    if (!data || !data.prices) return undefined;
+    return data.prices[name];
+  }
+
+  // ── SYNC REMOVE BUTTON VISIBILITY ───────────────────────────
+  function syncRemoveButtons() {
+    const rows = list.querySelectorAll('.order-item-row');
+    list.classList.toggle('single-row', rows.length === 1);
+  }
+
+  // ── COLLECT CURRENT ROWS ─────────────────────────────────────
+  function getItems() {
+    const items = [];
+    list.querySelectorAll('.order-item-row').forEach(row => {
+      const sel = row.querySelector('select');
+      const qty = row.querySelector('input[type="number"]');
+      if (!sel || !qty) return;
+      const name   = sel.value;
+      const qtyVal = Math.max(1, parseInt(qty.value, 10) || 1);
+      if (name) items.push({ name, qty: qtyVal });
+    });
+    return items;
+  }
+
+  // ── BUILD THE PREVIEW ────────────────────────────────────────
+  function updatePreview() {
+    const items = getItems();
+
+    if (!items.length) {
+      host.classList.remove('visible');
+      host.innerHTML = '';
+      return;
+    }
+
+    host.innerHTML = `
+      <div class="op-header">
+        <strong>You're ordering:</strong>
+      </div>
+      <div class="op-strip">
+        ${items.map(({ name, qty }) => {
+          const images = _getProductImages(name);
+          const src    = images[0] || '';
+          if (!src) return '';
+          return `
+            <div class="op-item">
+              <button type="button" class="op-thumb" data-product="${name}"
+                      aria-label="View ${name}">
+                <img src="${src}" alt="${name}" loading="lazy" />
+                ${qty > 1 ? `<span class="op-qty-badge">&times;${qty}</span>` : ''}
+              </button>
+              <span class="op-item-label">${name}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <p class="op-hint">Click any image to enlarge</p>
+    `;
+    host.classList.add('visible');
+
+    host.querySelectorAll('.op-thumb').forEach(btn => {
+      const name   = btn.getAttribute('data-product');
+      const images = _getProductImages(name);
+      btn.addEventListener('click', () => {
+        window.SillyStitchesLightbox.open(images.length ? images : [btn.querySelector('img').src], 0, name);
+      });
+    });
+  }
+
+  // ── BUILD THE TOTAL ──────────────────────────────────────────
+  function updateTotal() {
+    if (!totalHost) return;
+    const items = getItems();
+
+    if (!items.length) {
+      totalHost.classList.remove('visible');
+      totalHost.innerHTML = '';
+      return;
+    }
+
+    let fixedSum  = 0;      // running sum of all known prices × qty
+    let hasFrom   = false;  // any "from" price in the order?
+    let hasPOA    = false;  // any null/custom price?
+
+    const lineHtml = items.map(({ name, qty }) => {
+      const price = getPrice(name);
+
+      if (price === null || price === undefined) {
+        // Custom / price on request
+        hasPOA = true;
+        return `
+          <div class="ot-line">
+            <span class="ot-name">${name}${qty > 1 ? ` ×${qty}` : ''}</span>
+            <span class="ot-price ot-poa">price on request</span>
+          </div>`;
+      }
+
+      if (typeof price === 'object' && price.from) {
+        // "From" price — count as minimum
+        hasFrom = true;
+        const lineTotal = price.amount * qty;
+        fixedSum += lineTotal;
+        return `
+          <div class="ot-line">
+            <span class="ot-name">${name}${qty > 1 ? ` ×${qty}` : ''}</span>
+            <span class="ot-price ot-from">from R${lineTotal.toFixed(2)}</span>
+          </div>`;
+      }
+
+      // Fixed price
+      const lineTotal = price * qty;
+      fixedSum += lineTotal;
+      return `
+        <div class="ot-line">
+          <span class="ot-name">${name}${qty > 1 ? ` ×${qty}` : ''}</span>
+          <span class="ot-price">R${lineTotal.toFixed(2)}</span>
+        </div>`;
+    }).join('');
+
+    // Build the total summary line
+    let totalLabel, totalClass;
+    if (hasPOA && fixedSum === 0) {
+      // Everything is custom
+      totalLabel = 'To be confirmed';
+      totalClass = 'ot-total-poa';
+    } else if (hasPOA || hasFrom) {
+      // Mix of known + unknown — show minimum
+      totalLabel = `from R${fixedSum.toFixed(2)}`;
+      totalClass = 'ot-total-from';
+    } else {
+      totalLabel = `R${fixedSum.toFixed(2)}`;
+      totalClass = '';
+    }
+
+    totalHost.innerHTML = `
+      <div class="ot-lines">${lineHtml}</div>
+      <div class="ot-summary">
+        <span class="ot-summary-label">Estimated total</span>
+        <span class="ot-summary-amount ${totalClass}">${totalLabel}</span>
+      </div>
+      ${(hasPOA || hasFrom) ? '<p class="ot-disclaimer">Final price confirmed when I reply to your order.</p>' : ''}
+    `;
+    totalHost.classList.add('visible');
+  }
+
+  // ── WIRE UP A ROW ────────────────────────────────────────────
+  function wireRow(row) {
+    row.querySelector('select').addEventListener('change', () => {
+      updatePreview();
+      updateTotal();
+    });
+    row.querySelector('input[type="number"]').addEventListener('input', () => {
+      updatePreview();
+      updateTotal();
+    });
+    row.querySelector('.oir-remove').addEventListener('click', () => {
+      row.remove();
+      syncRemoveButtons();
+      updatePreview();
+      updateTotal();
+    });
+  }
+
+  // Wire the first static row
+  wireRow(list.querySelector('.order-item-row'));
+  syncRemoveButtons();
+
+  // ── ADD ITEM BUTTON ──────────────────────────────────────────
+  addBtn.addEventListener('click', () => {
+    const newRow = document.createElement('div');
+    newRow.className = 'order-item-row';
+    newRow.innerHTML = `
+      <div class="select-wrap oir-select">
+        <select name="product[]" class="form-select" required aria-label="Product">
+          ${optionsHTML}
+        </select>
+      </div>
+      <input
+        type="number"
+        name="quantity[]"
+        class="form-input oir-qty-input"
+        value="1"
+        min="1"
+        max="20"
+        required
+        aria-label="Quantity"
+      />
+      <button type="button" class="oir-remove" aria-label="Remove this item">&times;</button>
+    `;
+    list.appendChild(newRow);
+    wireRow(newRow);
+    syncRemoveButtons();
+    newRow.querySelector('select').focus();
+  });
+
+  // ── Run on load ──────────────────────────────────────────────
+  // Slight delay so section 4's URL-prefill runs first
+  setTimeout(() => { updatePreview(); updateTotal(); }, 0);
+})();
