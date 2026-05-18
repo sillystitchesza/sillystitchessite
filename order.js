@@ -26,7 +26,7 @@
 
 // ── CONFIGURATION ─────────────────────────────────────────────
 // REPLACE: change this to your real email address
-const OWNER_EMAIL = 'you@example.com';
+const OWNER_EMAIL = 'sillystitchesza@gmail.com';
 
 // REPLACE: change this to your shop's name (shown as sender)
 const SHOP_NAME   = 'Silly Stitches';
@@ -34,7 +34,7 @@ const SHOP_NAME   = 'Silly Stitches';
 // REPLACE: "From" address used in the notification email.
 // Must be a domain you own or that is authorised via SPF/DKIM for MailChannels.
 // For testing, you can use: orders@yourdomain.com
-const FROM_EMAIL  = 'orders@yourdomain.com';
+const FROM_EMAIL  = 'orders@sillystitches.co.za';
 // ─────────────────────────────────────────────────────────────
 
 
