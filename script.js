@@ -226,8 +226,28 @@
       });
 
       if (response.ok) {
+        // Reset form fields
         form.reset();
-        openModal();
+
+        // Remove any extra item rows — leave only the first, reset its select
+        const itemsList = document.getElementById('orderItemsList');
+        if (itemsList) {
+          itemsList.querySelectorAll('.order-item-row').forEach((row, i) => {
+            if (i > 0) row.remove();
+          });
+          const firstSelect = itemsList.querySelector('select');
+          if (firstSelect) firstSelect.value = '';
+        }
+
+        // Clear the preview strip and estimated total
+        const preview = document.getElementById('orderProductPreview');
+        const total   = document.getElementById('orderTotal');
+        if (preview) { preview.innerHTML = ''; preview.classList.remove('visible'); }
+        if (total)   { total.innerHTML   = ''; total.classList.remove('visible');   }
+
+        // Scroll to top, then show the popup once it arrives
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setTimeout(openModal, 400);
       } else {
         throw new Error(`Server responded with status ${response.status}`);
       }
