@@ -178,61 +178,47 @@
               <p class="form-hint">For custom orders, please describe your vision here!</p>
             </div>
 
-            <!-- Delivery preference -->
-            <div class="form-group" style="margin-top: 24px;">
-              <label class="form-label">Delivery <span class="required-star">✦</span></label>
+            <!-- ── DELIVERY / COLLECTION ── -->
+            <div class="form-group" style="margin-top:24px;">
+              <label class="form-label">How would you like to receive your order? <span class="required-star">✦</span></label>
 
-              <label style="
-                display:flex;align-items:center;gap:14px;cursor:pointer;
-                padding:14px 18px;border:1.5px solid var(--beige);
-                border-radius:var(--radius-md);background:var(--cream);
-                font-size:0.95rem;font-weight:600;color:var(--text-dark);
-              ">
+              <!-- Checkbox -->
+              <label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:14px 18px;border:1.5px solid var(--beige);border-radius:var(--radius-md);background:var(--cream);font-size:0.95rem;font-weight:600;color:var(--text-dark);margin-bottom:12px;">
                 <input type="checkbox" id="deliveryCheck" name="delivery" value="yes"
                   style="width:18px;height:18px;accent-color:var(--red-muted);cursor:pointer;flex-shrink:0;" />
-                I'd like this delivered to me
+                Deliver to my address
               </label>
-            </div>
 
-            <!-- Address field — shown when delivery is checked -->
-            <div class="form-group" id="addressGroup" style="display:none;margin-top:-8px;">
-              <label class="form-label" for="address">
-                Delivery Address <span class="required-star">✦</span>
-              </label>
-              <textarea id="address" name="address" class="form-textarea"
-                placeholder="Street address, suburb, city, postal code…"></textarea>
-            </div>
-
-            <!-- Collection options — shown when delivery is NOT checked -->
-            <div id="collectionOptions" style="
-              margin-top:-8px;padding:16px 18px;
-              background:var(--cream-dark);border:1.5px solid var(--beige);
-              border-radius:var(--radius-md);
-            ">
-              <p style="font-size:0.85rem;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:12px;">
-                Preferred collection point
-              </p>
-              <div style="display:flex;flex-direction:column;gap:10px;">
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
-                  <input type="radio" name="collection_location" value="Sea Point" checked
-                    style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
-                  Sea Point
+              <!-- Address (hidden by default, shown when checkbox ticked) -->
+              <div id="addressGroup" style="display:none;">
+                <label class="form-label" for="address" style="margin-top:4px;">
+                  Delivery Address <span class="required-star">✦</span>
                 </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
-                  <input type="radio" name="collection_location" value="Rondebosch"
-                    style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
-                  Rondebosch
-                </label>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
-                  <input type="radio" name="collection_location" value="Century City"
-                    style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
-                  Century City
-                </label>
+                <textarea id="address" name="address" class="form-textarea"
+                  placeholder="Street address, suburb, city, postal code…"></textarea>
               </div>
-              <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;font-style:italic;">
-                Exact time and details confirmed over email.
-              </p>
+
+              <!-- Collection options (shown by default, hidden when checkbox ticked) -->
+              <div id="collectionOptions" style="padding:16px 18px;background:var(--cream-dark);border:1.5px solid var(--beige);border-radius:var(--radius-md);">
+                <p style="font-size:0.82rem;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;">Preferred collection point</p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
+                    <input type="radio" name="collection_location" value="Sea Point" checked style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
+                    Sea Point
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
+                    <input type="radio" name="collection_location" value="Rondebosch" style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
+                    Rondebosch
+                  </label>
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.92rem;font-weight:600;color:var(--text-dark);">
+                    <input type="radio" name="collection_location" value="Century City" style="accent-color:var(--red-muted);width:16px;height:16px;flex-shrink:0;" />
+                    Century City
+                  </label>
+                </div>
+                <p style="font-size:0.78rem;color:var(--text-light);margin-top:10px;font-style:italic;">Exact time and details confirmed over email.</p>
+              </div>
             </div>
+            <!-- ── END DELIVERY / COLLECTION ── -->
 
             <!--
               PRODUCT PREVIEW
