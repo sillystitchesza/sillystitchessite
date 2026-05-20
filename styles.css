@@ -1157,18 +1157,28 @@ h1, h2, h3, h4 {
     padding: 56px 0;
   }
 
-  /* ── Navbar logo — shrink to fit on small screens ── */
+  /* ── Navbar logo — prevent wrapping and overflow on small screens ── */
   .navbar-inner {
     height: 72px;
   }
 
+  .navbar-logo {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
   .logo-icon img {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
   }
 
   .logo-text {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
