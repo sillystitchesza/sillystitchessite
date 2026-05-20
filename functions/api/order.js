@@ -1,29 +1,18 @@
 /**
- * functions/api/order.js
- * ─────────────────────────────────────────────────────────────
- * Cloudflare Pages Function — handles POST /api/order
+ * functions/api/order.js — Silly Stitches
+ * Uses Resend (resend.com) — free up to 3 000 emails/month.
  *
- * Uses Resend (resend.com) to send emails — free up to 3 000/month.
- * MailChannels is NO LONGER FREE on Cloudflare (deprecated May 2024).
- *
- * SETUP CHECKLIST (read SETUP.md for full details):
- *   1. Sign up at https://resend.com (free, no credit card)
- *   2. Add & verify your domain (sillystitches.co.za) in Resend
- *   3. Create an API key in Resend → copy it
- *   4. In Cloudflare Pages → your project → Settings → Environment variables
- *      add: RESEND_API_KEY = <your key>  (mark as "Secret")
- *   5. Deploy — done!
- * ─────────────────────────────────────────────────────────────
+ * SETUP: see SETUP.md
  */
 
 // ── CONFIG ────────────────────────────────────────────────────
 const OWNER_EMAIL = 'sillystitchesza@gmail.com';
 const SHOP_NAME   = 'Silly Stitches';
-
-// Must exactly match a verified sender domain in your Resend account.
-// After you verify sillystitches.co.za in Resend you can use any
-// address at that domain — e.g. orders@sillystitches.co.za
 const FROM_EMAIL  = 'orders@sillystitches.co.za';
+
+// Used to display the logo in the customer confirmation email.
+// Update this if your domain ever changes.
+const LOGO_URL    = 'https://sillystitches.co.za/images/logo.jpeg';
 // ──────────────────────────────────────────────────────────────
 
 
@@ -38,9 +27,11 @@ export async function onRequestPost(context) {
     const body   = await context.request.text();
     const params = new URLSearchParams(body);
 
-    const name  = (params.get('name')  || '').trim();
-    const email = (params.get('email') || '').trim();
-    const notes = (params.get('notes') || '').trim();
+    const name     = (params.get('name')    || '').trim();
+    const email    = (params.get('email')   || '').trim();
+    const notes    = (params.get('notes')   || '').trim();
+    const delivery = params.get('delivery') === 'yes';
+    const address  = (params.get('address') || '').trim();
 
     const products   = params.getAll('product[]').map(v => v.trim()).filter(Boolean);
     const quantities = params.getAll('quantity[]').map(v => v.trim());
@@ -55,6 +46,7 @@ export async function onRequestPost(context) {
     if (!name)                          errors.push('Name is required.');
     if (!email || !isValidEmail(email)) errors.push('A valid email is required.');
     if (!items.length)                  errors.push('At least one product is required.');
+    if (delivery && !address)           errors.push('A delivery address is required when delivery is selected.');
 
     items.forEach(({ product, quantity }, i) => {
       const label = items.length > 1 ? ` (item ${i + 1})` : '';
@@ -65,7 +57,7 @@ export async function onRequestPost(context) {
 
     if (errors.length) return jsonResponse({ error: errors.join(' ') }, 400);
 
-    // ── 3. Grab Resend API key from env ────────────────────────
+    // ── 3. Grab Resend API key ─────────────────────────────────
     const RESEND_API_KEY = context.env.RESEND_API_KEY;
     if (!RESEND_API_KEY) {
       console.error('RESEND_API_KEY environment variable is not set.');
@@ -74,13 +66,13 @@ export async function onRequestPost(context) {
 
     // ── 4a. Owner notification ─────────────────────────────────
     const ownerResult = await sendEmail({
-      apiKey:   RESEND_API_KEY,
-      from:     `${SHOP_NAME} Orders <${FROM_EMAIL}>`,
-      to:       OWNER_EMAIL,
-      replyTo:  email,   // "Reply" in Gmail goes straight to the customer
-      subject:  `✦ New order from ${name} — ${items[0].product}${items.length > 1 ? ` + ${items.length - 1} more` : ''}`,
-      text:     buildOwnerText({ name, email, items, notes }),
-      html:     buildOwnerHtml({ name, email, items, notes }),
+      apiKey:  RESEND_API_KEY,
+      from:    `${SHOP_NAME} Orders <${FROM_EMAIL}>`,
+      to:      OWNER_EMAIL,
+      replyTo: email,
+      subject: `✦ New order from ${name} — ${items[0].product}${items.length > 1 ? ` + ${items.length - 1} more` : ''}`,
+      text:    buildOwnerText({ name, email, items, notes, delivery, address }),
+      html:    buildOwnerHtml({ name, email, items, notes, delivery, address }),
     });
 
     if (!ownerResult.ok) {
@@ -89,22 +81,19 @@ export async function onRequestPost(context) {
     }
 
     // ── 4b. Customer confirmation ──────────────────────────────
-    // If this fails we log it but don't fail the whole request
-    // (the owner email already went through).
     const customerResult = await sendEmail({
       apiKey:  RESEND_API_KEY,
       from:    `Emma @ ${SHOP_NAME} <${FROM_EMAIL}>`,
       to:      email,
       subject: `Your Silly Stitches order has been received! 🧵`,
-      text:    buildCustomerText({ name, items }),
-      html:    buildCustomerHtml({ name, items }),
+      text:    buildCustomerText({ name, items, delivery, address }),
+      html:    buildCustomerHtml({ name, items, delivery, address }),
     });
 
     if (!customerResult.ok) {
       console.warn('Resend customer email failed (non-fatal):', customerResult.error);
     }
 
-    // ── 5. Success ─────────────────────────────────────────────
     return jsonResponse({ success: true }, 200);
 
   } catch (err) {
@@ -158,8 +147,11 @@ function isValidEmail(e) {
 
 /* ── OWNER EMAIL ────────────────────────────────────────────── */
 
-function buildOwnerText({ name, email, items, notes }) {
+function buildOwnerText({ name, email, items, notes, delivery, address }) {
   const lines = items.map((it, i) => `  ${i + 1}. ${it.product}  ×${it.quantity}`).join('\n');
+  const deliveryLine = delivery
+    ? `Delivery : Yes\nAddress  : ${address || 'Not provided'}`
+    : `Delivery : No — Customer will collect`;
   return [
     'New order — Silly Stitches',
     '═══════════════════════════════',
@@ -169,15 +161,23 @@ function buildOwnerText({ name, email, items, notes }) {
     'Items:',
     lines,
     '',
+    deliveryLine,
+    '',
     `Notes    : ${notes || 'None'}`,
     '═══════════════════════════════',
     'Hit Reply to respond directly to the customer.',
   ].join('\n');
 }
 
-function buildOwnerHtml({ name, email, items, notes }) {
-  const itemRows = items.map((it, i) => row(`Item ${i + 1}`,
-    `<strong>${it.product}</strong> &nbsp;×&nbsp; ${it.quantity}`)).join('');
+function buildOwnerHtml({ name, email, items, notes, delivery, address }) {
+  const itemRows = items.map((it, i) => row(
+    `Item ${i + 1}`,
+    `<strong>${it.product}</strong> &nbsp;×&nbsp; ${it.quantity}`
+  )).join('');
+
+  const deliveryValue = delivery
+    ? `Yes<br><span style="font-size:0.85rem;color:#5a4a42;">${address || '<em>Address not provided</em>'}</span>`
+    : `No — customer will collect<br><span style="font-size:0.82rem;color:#a08070;font-style:italic;">Sea Point, Rondebosch, or Century City</span>`;
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#fdf8f2;font-family:Arial,sans-serif;color:#3a2e28;">
@@ -194,6 +194,7 @@ function buildOwnerHtml({ name, email, items, notes }) {
           ${row('Customer', name)}
           ${row('Email', `<a href="mailto:${email}" style="color:#c4706a;font-weight:700;">${email}</a>`)}
           ${itemRows}
+          ${row('Delivery', deliveryValue)}
           ${row('Notes', notes || '<em style="color:#a08070;">None</em>')}
         </table>
         <div style="text-align:center;margin-top:32px;">
@@ -215,31 +216,45 @@ function buildOwnerHtml({ name, email, items, notes }) {
 
 /* ── CUSTOMER CONFIRMATION EMAIL ────────────────────────────── */
 
-function buildCustomerText({ name, items }) {
+function buildCustomerText({ name, items, delivery, address }) {
   const lines = items.map((it, i) => `  ${i + 1}. ${it.product}  ×${it.quantity}`).join('\n');
+  const collectionOrDelivery = delivery
+    ? `Your order will be shipped to:\n  ${address}`
+    : `You've chosen to collect. I'll confirm a convenient time and location (Sea Point, Rondebosch, or Century City, Cape Town) over email.`;
   return [
     `Hi ${name}!`,
     '',
     "Thank you so much for your order — I'm so excited to make something for you 🎀",
     '',
-    'Here\'s what I\'ve received:',
+    "Here's what I've received:",
     lines,
+    '',
+    collectionOrDelivery,
     '',
     "I'll be in touch within 1–2 business days with a payment link.",
     "Once payment reflects, I'll begin your order right away!",
     '',
-    'In the meantime, feel free to reply to this email or DM me on Instagram @sillystitches.za if you have any questions.',
+    'Feel free to reply to this email or DM me on Instagram @sillystitches.za with any questions.',
     '',
     '— Emma x',
     'Silly Stitches',
     'sillystitchesza@gmail.com',
-    'https://www.instagram.com/sillystitches.za',
   ].join('\n');
 }
 
-function buildCustomerHtml({ name, items }) {
-  const itemRows = items.map((it, i) => row(`Item ${i + 1}`,
-    `<strong>${it.product}</strong> &nbsp;×&nbsp; ${it.quantity}`)).join('');
+function buildCustomerHtml({ name, items, delivery, address }) {
+  const itemRows = items.map((it, i) => row(
+    `Item ${i + 1}`,
+    `<strong>${it.product}</strong> &nbsp;×&nbsp; ${it.quantity}`
+  )).join('');
+
+  const deliveryRow = delivery
+    ? row('Delivery', `Shipping to:<br><span style="font-size:0.88rem;color:#5a4a42;">${address}</span>`)
+    : row('Collection', `Sea Point, Rondebosch, or Century City, Cape Town.<br><span style="font-size:0.82rem;color:#a08070;font-style:italic;">Details confirmed over email.</span>`);
+
+  const deliveryNote = delivery
+    ? `Your order will be shipped via <strong>Aramex</strong> once payment reflects (3–5 business days countrywide). Shipping cost will be confirmed when I reply.`
+    : `You've chosen to collect. I'll confirm a time and location that works for you over email — available in <strong>Sea Point</strong>, <strong>Rondebosch</strong>, or <strong>Century City</strong>.`;
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#fdf8f2;font-family:Arial,sans-serif;color:#3a2e28;">
@@ -247,10 +262,11 @@ function buildCustomerHtml({ name, items }) {
   <tr><td align="center">
     <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;border:1px solid #e8d9c5;overflow:hidden;max-width:100%;">
 
-      <!-- Header -->
+      <!-- Header with logo -->
       <tr><td style="background:#c4706a;padding:32px 40px;text-align:center;">
-        <p style="margin:0;font-size:2rem;">🧵🎀</p>
-        <h1 style="margin:10px 0 0;font-size:1.4rem;color:#fff;font-weight:600;">Order received!</h1>
+        <img src="${LOGO_URL}" alt="Silly Stitches"
+             style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.4);display:block;margin:0 auto;" />
+        <h1 style="margin:14px 0 0;font-size:1.4rem;color:#fff;font-weight:600;">Order Received!</h1>
       </td></tr>
 
       <!-- Body -->
@@ -264,6 +280,7 @@ function buildCustomerHtml({ name, items }) {
         <!-- Order summary -->
         <table width="100%" cellpadding="0" cellspacing="0" style="background:#fdf8f2;border-radius:10px;border:1px solid #e8d9c5;overflow:hidden;margin-bottom:28px;">
           ${itemRows}
+          ${deliveryRow}
         </table>
 
         <!-- What happens next -->
@@ -272,15 +289,14 @@ function buildCustomerHtml({ name, items }) {
           <ol style="margin:0;padding-left:20px;color:#5a4a42;font-size:0.9rem;line-height:1.8;">
             <li>I'll email you within <strong>1–2 business days</strong> with a payment link.</li>
             <li>Once payment reflects, I'll begin making your order straight away!</li>
-            <li>I'll send you a photo before shipping so you can approve the finished piece.</li>
-            <li>Your order ships via <strong>Aramex</strong> (3–5 business days countrywide).</li>
+            <li>I'll send you a photo before dispatch so you can approve the finished piece.</li>
+            <li>${deliveryNote}</li>
           </ol>
         </div>
 
         <p style="font-size:0.9rem;color:#7a5c4e;line-height:1.6;margin:0 0 24px;">
-          In the meantime, feel free to reply to this email or DM me on
-          <a href="https://www.instagram.com/sillystitches.za" style="color:#c4706a;font-weight:700;">@sillystitches.za</a>
-          if you have any questions!
+          Questions? Reply to this email or DM me on
+          <a href="https://www.instagram.com/sillystitches.za" style="color:#c4706a;font-weight:700;">@sillystitches.za</a>.
         </p>
 
         <p style="font-size:0.95rem;color:#3a2e28;margin:0;">

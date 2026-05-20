@@ -1156,6 +1156,20 @@ h1, h2, h3, h4 {
   .section {
     padding: 56px 0;
   }
+
+  /* ── Navbar logo — shrink to fit on small screens ── */
+  .navbar-inner {
+    height: 72px;
+  }
+
+  .logo-icon img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .logo-text {
+    font-size: 1.75rem;
+  }
 }
 
 

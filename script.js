@@ -61,7 +61,6 @@
 
   // Stagger delay for grid items
   revealEls.forEach((el, i) => {
-    // Apply a stagger of 0–200ms based on position in a 3-column grid
     const delay = (i % 3) * 80;
     el.style.transitionDelay = `${delay}ms`;
   });
@@ -86,17 +85,34 @@
 
 
 /* ============================================================
-   3. ORDER FORM — Validation & AJAX Submission
+   3. ORDER FORM — Validation, Delivery Toggle & AJAX Submission
    ============================================================ */
 (function initOrderForm() {
   const form      = document.getElementById('orderForm');
   if (!form) return;
 
-  const submitBtn = document.getElementById('submitBtn');
-  const errorMsg  = document.getElementById('errorMsg');
+  const submitBtn    = document.getElementById('submitBtn');
+  const errorMsg     = document.getElementById('errorMsg');
+  const deliveryCheck = document.getElementById('deliveryCheck');
+  const addressGroup  = document.getElementById('addressGroup');
+  const collectionMsg = document.getElementById('collectionMsg');
+
+  // ── Delivery checkbox toggle ───────────────────────────────
+  if (deliveryCheck) {
+    deliveryCheck.addEventListener('change', function () {
+      if (this.checked) {
+        if (addressGroup)  addressGroup.style.display  = 'block';
+        if (collectionMsg) collectionMsg.style.display = 'none';
+      } else {
+        if (addressGroup)  addressGroup.style.display  = 'none';
+        if (collectionMsg) collectionMsg.style.display = 'flex';
+      }
+      // Retrigger the order total so delivery line appears/disappears
+      document.dispatchEvent(new CustomEvent('ss-delivery-changed'));
+    });
+  }
 
   // ── Inject success modal once ──────────────────────────────
-  // (Replaces the old inline #successMsg banner with a full overlay)
   const modal = document.createElement('div');
   modal.id = 'orderSuccessModal';
   modal.setAttribute('role', 'dialog');
@@ -226,7 +242,7 @@
       });
 
       if (response.ok) {
-        // Reset form fields
+        // ── Full reset ────────────────────────────────────────
         form.reset();
 
         // Remove any extra item rows — leave only the first, reset its select
@@ -239,15 +255,24 @@
           if (firstSelect) firstSelect.value = '';
         }
 
+        // Reset delivery checkbox UI
+        if (deliveryCheck) {
+          deliveryCheck.checked = false;
+          if (addressGroup)  addressGroup.style.display  = 'none';
+          if (collectionMsg) collectionMsg.style.display = 'flex';
+          document.dispatchEvent(new CustomEvent('ss-delivery-changed'));
+        }
+
         // Clear the preview strip and estimated total
         const preview = document.getElementById('orderProductPreview');
         const total   = document.getElementById('orderTotal');
         if (preview) { preview.innerHTML = ''; preview.classList.remove('visible'); }
         if (total)   { total.innerHTML   = ''; total.classList.remove('visible');   }
 
-        // Scroll to top, then show the popup once it arrives
+        // Scroll to top, then show popup
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setTimeout(openModal, 400);
+
       } else {
         throw new Error(`Server responded with status ${response.status}`);
       }
@@ -270,9 +295,11 @@
     let valid = true;
 
     form.querySelectorAll('[required]').forEach(field => {
-      // Clear previous error styles
       field.style.borderColor = '';
       field.style.boxShadow   = '';
+
+      // Skip hidden fields (e.g. address when delivery unchecked)
+      if (field.offsetParent === null) return;
 
       const value = field.value.trim();
 
@@ -296,7 +323,6 @@
     field.style.boxShadow   = '0 0 0 4px rgba(196,112,106,0.2)';
     field.focus();
 
-    // Clear error styling on next input
     field.addEventListener('input', () => {
       field.style.borderColor = '';
       field.style.boxShadow   = '';
@@ -322,7 +348,6 @@
   const productName = params.get('product');
   if (!productName) return;
 
-  // Try to match the option value (case-insensitive)
   const options = Array.from(select.options);
   const match   = options.find(opt =>
     opt.value.toLowerCase() === productName.toLowerCase()
@@ -336,16 +361,6 @@
 
 /* ============================================================
    5. SHOP FILTER BUTTONS — functional category filtering
-   ─────────────────────────────────────────────────────────────
-   Each button carries a data-filter="…" value that is matched
-   against data-category="…" on every .product-card.
-
-   "all" → show every card.
-   Any other value → hide cards whose data-category doesn't match.
-
-   Cards are shown/hidden via the .card-hidden class (CSS handles
-   the visual transition). The count of visible results is shown
-   in #filterCount, which is injected once below the buttons.
    ============================================================ */
 (function initFilterButtons() {
   const filterBtns = document.querySelectorAll('.filter-btn[data-filter]');
@@ -354,7 +369,6 @@
   const cards = document.querySelectorAll('.product-card[data-category]');
   if (!cards.length) return;
 
-  // Inject a small live count beneath the filter bar
   const filterBar = document.querySelector('.shop-filter');
   const countEl   = document.createElement('p');
   countEl.id        = 'filterCount';
@@ -369,7 +383,6 @@
       if (match) visible++;
     });
 
-    // Update count text — hide it on "all" since it's obvious
     if (value === 'all') {
       countEl.textContent = '';
     } else {
@@ -388,7 +401,6 @@
     });
   });
 
-  // Run once on load to reflect the default "active" button
   const initial = document.querySelector('.filter-btn.active[data-filter]');
   if (initial) applyFilter(initial.dataset.filter);
 })();
@@ -412,24 +424,17 @@ function _getProductImages(name) {
 
 /* ============================================================
    6. HERO IMAGE CAROUSEL
-   ─────────────────────────────────────────────────────────────
-   Rotates through hero.images at hero.intervalMs.
-   Supports two animations: 'flip' (card flip on Y axis) or
-   'fade' (crossfade). Falls back gracefully if products.js is
-   missing or has 0/1 images — leaves the existing <img> alone.
    ============================================================ */
 (function initHeroCarousel() {
   const wrap = document.querySelector('.hero-image-wrap');
-  if (!wrap) return; // not on a page that has a hero
+  if (!wrap) return;
 
   const data = window.SILLY_STITCHES_PRODUCTS && window.SILLY_STITCHES_PRODUCTS.hero;
   if (!data || !Array.isArray(data.images) || data.images.length < 2) return;
 
-  // Inherit alt text from the existing <img> for accessibility
   const existing = wrap.querySelector('img');
   const altText  = existing ? existing.alt : 'Hero image';
 
-  // Rebuild contents — one <img> per source, stacked
   wrap.innerHTML = '';
   wrap.classList.add('hero-carousel');
   if (data.animation === 'flip') wrap.classList.add('anim-flip');
@@ -453,17 +458,14 @@ function _getProductImages(name) {
     const nextImg = imgs[next];
 
     if (data.animation === 'flip') {
-      // Card-flip: shrink current to edge, then bring next back
       cur.classList.add('flipping-out');
       setTimeout(() => {
         cur.classList.remove('active', 'flipping-out');
         nextImg.classList.add('active', 'flipping-in');
-        // Force reflow so the entry animation plays
         void nextImg.offsetWidth;
         nextImg.classList.remove('flipping-in');
       }, 350);
     } else {
-      // Plain crossfade
       cur.classList.remove('active');
       nextImg.classList.add('active');
     }
@@ -476,13 +478,6 @@ function _getProductImages(name) {
 
 /* ============================================================
    7. PRODUCT CARD HOVER SLIDESHOW
-   ─────────────────────────────────────────────────────────────
-   For each .product-card that has a data-product matching an
-   entry in products.js, this preloads all images and stacks
-   them inside .product-image. On hover, they cycle every ~900ms
-   with a soft crossfade. On mouseleave we return to image 0.
-   Cards with only one image are skipped for rotation, but
-   still get the click-to-lightbox behaviour.
    ============================================================ */
 (function initProductCardCarousels() {
   const cards = document.querySelectorAll('.product-card[data-product]');
@@ -496,9 +491,6 @@ function _getProductImages(name) {
     const imageBox = card.querySelector('.product-image');
     if (!imageBox) return;
 
-    /* ── Single-image product ──────────────────────────
-       Don't restructure anything. Just enable click-to-
-       zoom on the existing <img>. */
     if (images.length < 2) {
       imageBox.style.cursor = 'zoom-in';
       imageBox.addEventListener('click', (e) => {
@@ -508,21 +500,15 @@ function _getProductImages(name) {
       return;
     }
 
-    /* ── Multi-image product — build carousel ─────────── */
-
-    // Preserve any badge (e.g. "New") so it stays on top
     const badge = imageBox.querySelector('.product-badge');
 
-    // Capture original alt text from existing <img>
     const origImg = imageBox.querySelector('img');
     const altText = origImg ? origImg.alt : name;
 
-    // Wipe old <img> tags (keep the badge)
     imageBox.querySelectorAll('img').forEach(el => el.remove());
     imageBox.classList.add('has-carousel');
     if (badge && !imageBox.contains(badge)) imageBox.appendChild(badge);
 
-    // Stack the new images, only the first is .active
     images.forEach((src, i) => {
       const img = document.createElement('img');
       img.src = src;
@@ -532,10 +518,8 @@ function _getProductImages(name) {
       imageBox.appendChild(img);
     });
 
-    // Track which image is showing (used by hover-cycle + click-to-zoom)
     let idx = 0;
 
-    // Click → open lightbox at whatever image is currently visible
     imageBox.style.cursor = 'zoom-in';
     imageBox.addEventListener('click', (e) => {
       if (e.target.closest('a, button')) return;
@@ -564,15 +548,6 @@ function _getProductImages(name) {
 
 /* ============================================================
    8. LIGHTBOX MODAL
-   ─────────────────────────────────────────────────────────────
-   A single full-screen viewer injected once into <body>.
-   Exposed globally as window.SillyStitchesLightbox.open(images,
-   startIndex, title). Supports:
-   • Dot indicators across the TOP (above the image)
-   • Click-left / click-right halves of the image to navigate
-   • Outer ‹ › side buttons
-   • Keyboard ← → Esc navigation
-   • Click-outside to close
    ============================================================ */
 (function initLightbox() {
   const overlay = document.createElement('div');
@@ -581,9 +556,6 @@ function _getProductImages(name) {
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-hidden', 'true');
 
-  // ── DOM order: close · dots (TOP) · outer side buttons · stage ──
-  // The flex-direction:column on .ss-lightbox stacks them vertically.
-  // Dots come BEFORE the stage so they render above the image.
   overlay.innerHTML = `
     <button class="ss-lb-close" aria-label="Close gallery">&times;</button>
     <button class="ss-lb-prev"  aria-label="Previous image">&lsaquo;</button>
@@ -594,13 +566,6 @@ function _getProductImages(name) {
     <figure class="ss-lb-stage">
       <div class="ss-lb-img-wrap">
         <img class="ss-lb-img" alt="" />
-        <!--
-          LEFT / RIGHT click zones — transparent overlays that sit
-          on each half of the image. They show a subtle gradient +
-          arrow on hover so the user discovers they're clickable.
-          tabindex="-1" keeps them out of the tab order since the
-          outer ‹ › buttons already handle keyboard users.
-        -->
         <button class="ss-lb-zone ss-lb-zone-l" tabindex="-1"
                 aria-hidden="true"></button>
         <button class="ss-lb-zone ss-lb-zone-r" tabindex="-1"
@@ -630,14 +595,12 @@ function _getProductImages(name) {
       : state.title;
 
     const multi = state.images.length > 1;
-    // Outer side buttons + image click zones — hidden for single images
     prevBtn.style.display  = multi ? '' : 'none';
     nextBtn.style.display  = multi ? '' : 'none';
     dotsEl.style.display   = multi ? '' : 'none';
     zoneL.style.display    = multi ? '' : 'none';
     zoneR.style.display    = multi ? '' : 'none';
 
-    // Re-render dot indicators
     dotsEl.innerHTML = '';
     if (multi) {
       state.images.forEach((_, i) => {
@@ -668,8 +631,8 @@ function _getProductImages(name) {
 
   prevBtn.addEventListener('click', prev);
   nextBtn.addEventListener('click', next);
-  zoneL.addEventListener('click', prev);   // left half of image → previous
-  zoneR.addEventListener('click', next);   // right half of image → next
+  zoneL.addEventListener('click', prev);
+  zoneR.addEventListener('click', next);
   closeBtn.addEventListener('click', close);
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   document.addEventListener('keydown', (e) => {
@@ -684,18 +647,9 @@ function _getProductImages(name) {
 
 
 /* ============================================================
-   9. ORDER PAGE — MULTI-ITEM ROWS, PRODUCT PREVIEW & TOTAL
+   9. ORDER PAGE — MULTI-ITEM ROWS, PRODUCT PREVIEW, TOTAL
+      & DELIVERY FEE
    ─────────────────────────────────────────────────────────────
-   Manages the dynamic item list (#orderItemsList), the image
-   preview strip (#orderProductPreview), and the live price
-   total (#orderTotal).
-
-   ROW MANAGEMENT
-   • "+ Add another item" clones the first row's <select> options
-     into a fresh row appended to #orderItemsList.
-   • Each row's × button removes it (min 1 row always remains).
-   • The × on the ONLY row is hidden via the .single-row class.
-
    PREVIEW STRIP
    • Shows one thumbnail per row — always image #1 from products.js.
    • If quantity > 1, a small badge "×N" appears on the thumbnail.
@@ -707,10 +661,12 @@ function _getProductImages(name) {
    • "From" prices → same, but total is flagged as "from R…".
    • null price (custom/POA) → line shows "price on request",
      total shows "to be confirmed".
+   • If delivery is checked, a "Delivery — To be confirmed" line
+     is added and the summary reads "R750.00 + Delivery Fee".
    • Hidden until at least one product is selected.
 
    All three rebuild together whenever a select changes, a qty
-   changes, a row is added, or a row is removed.
+   changes, a row is added, a row is removed, or delivery changes.
    ============================================================ */
 (function initOrderItems() {
   const list      = document.getElementById('orderItemsList');
@@ -719,14 +675,9 @@ function _getProductImages(name) {
   const totalHost = document.getElementById('orderTotal');
   if (!list || !addBtn || !host) return; // only runs on order page
 
-  // ── Snapshot of the options HTML from the static first row.
-  //    Used when creating every subsequent row so the product list
-  //    stays in one place (the HTML) and is never duplicated.
   const optionsHTML = list.querySelector('select').innerHTML;
 
   // ── PRICE LOOKUP ─────────────────────────────────────────────
-  // Returns the price entry from products.js for a given name,
-  // or undefined if not found.
   function getPrice(name) {
     const data = window.SILLY_STITCHES_PRODUCTS;
     if (!data || !data.prices) return undefined;
@@ -800,7 +751,8 @@ function _getProductImages(name) {
   // ── BUILD THE TOTAL ──────────────────────────────────────────
   function updateTotal() {
     if (!totalHost) return;
-    const items = getItems();
+    const items       = getItems();
+    const hasDelivery = document.getElementById('deliveryCheck')?.checked || false;
 
     if (!items.length) {
       totalHost.classList.remove('visible');
@@ -808,15 +760,14 @@ function _getProductImages(name) {
       return;
     }
 
-    let fixedSum  = 0;      // running sum of all known prices × qty
-    let hasFrom   = false;  // any "from" price in the order?
-    let hasPOA    = false;  // any null/custom price?
+    let fixedSum = 0;
+    let hasFrom  = false;
+    let hasPOA   = false;
 
     const lineHtml = items.map(({ name, qty }) => {
       const price = getPrice(name);
 
       if (price === null || price === undefined) {
-        // Custom / price on request
         hasPOA = true;
         return `
           <div class="ot-line">
@@ -826,7 +777,6 @@ function _getProductImages(name) {
       }
 
       if (typeof price === 'object' && price.from) {
-        // "From" price — count as minimum
         hasFrom = true;
         const lineTotal = price.amount * qty;
         fixedSum += lineTotal;
@@ -837,7 +787,6 @@ function _getProductImages(name) {
           </div>`;
       }
 
-      // Fixed price
       const lineTotal = price * qty;
       fixedSum += lineTotal;
       return `
@@ -847,28 +796,40 @@ function _getProductImages(name) {
         </div>`;
     }).join('');
 
-    // Build the total summary line
+    // Delivery line (shown only when delivery checkbox is ticked)
+    const deliveryLineHtml = hasDelivery ? `
+      <div class="ot-line">
+        <span class="ot-name">Delivery</span>
+        <span class="ot-price ot-poa">To be confirmed</span>
+      </div>` : '';
+
+    // Build total summary label
     let totalLabel, totalClass;
+
     if (hasPOA && fixedSum === 0) {
-      // Everything is custom
-      totalLabel = 'To be confirmed';
+      totalLabel = hasDelivery ? 'To be confirmed + Delivery Fee' : 'To be confirmed';
       totalClass = 'ot-total-poa';
     } else if (hasPOA || hasFrom) {
-      // Mix of known + unknown — show minimum
-      totalLabel = `from R${fixedSum.toFixed(2)}`;
+      totalLabel = hasDelivery
+        ? `from R${fixedSum.toFixed(2)} + Delivery Fee`
+        : `from R${fixedSum.toFixed(2)}`;
       totalClass = 'ot-total-from';
     } else {
-      totalLabel = `R${fixedSum.toFixed(2)}`;
-      totalClass = '';
+      totalLabel = hasDelivery
+        ? `R${fixedSum.toFixed(2)} + Delivery Fee`
+        : `R${fixedSum.toFixed(2)}`;
+      totalClass = hasDelivery ? 'ot-total-from' : '';
     }
 
+    const showDisclaimer = hasPOA || hasFrom || hasDelivery;
+
     totalHost.innerHTML = `
-      <div class="ot-lines">${lineHtml}</div>
+      <div class="ot-lines">${lineHtml}${deliveryLineHtml}</div>
       <div class="ot-summary">
         <span class="ot-summary-label">Estimated total</span>
         <span class="ot-summary-amount ${totalClass}">${totalLabel}</span>
       </div>
-      ${(hasPOA || hasFrom) ? '<p class="ot-disclaimer">Final price confirmed when I reply to your order.</p>' : ''}
+      ${showDisclaimer ? '<p class="ot-disclaimer">Final price confirmed when I reply to your order.</p>' : ''}
     `;
     totalHost.classList.add('visible');
   }
@@ -894,6 +855,9 @@ function _getProductImages(name) {
   // Wire the first static row
   wireRow(list.querySelector('.order-item-row'));
   syncRemoveButtons();
+
+  // ── DELIVERY CHECKBOX — retrigger total ──────────────────────
+  document.addEventListener('ss-delivery-changed', () => updateTotal());
 
   // ── ADD ITEM BUTTON ──────────────────────────────────────────
   addBtn.addEventListener('click', () => {
@@ -924,6 +888,5 @@ function _getProductImages(name) {
   });
 
   // ── Run on load ──────────────────────────────────────────────
-  // Slight delay so section 4's URL-prefill runs first
   setTimeout(() => { updatePreview(); updateTotal(); }, 0);
 })();
