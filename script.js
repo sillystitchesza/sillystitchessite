@@ -89,30 +89,134 @@
    3. ORDER FORM — Validation & AJAX Submission
    ============================================================ */
 (function initOrderForm() {
-  const form       = document.getElementById('orderForm');
+  const form      = document.getElementById('orderForm');
   if (!form) return;
 
-  const submitBtn  = document.getElementById('submitBtn');
-  const successMsg = document.getElementById('successMsg');
-  const errorMsg   = document.getElementById('errorMsg');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorMsg  = document.getElementById('errorMsg');
 
+  // ── Inject success modal once ──────────────────────────────
+  // (Replaces the old inline #successMsg banner with a full overlay)
+  const modal = document.createElement('div');
+  modal.id = 'orderSuccessModal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'osm-title');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.style.cssText = [
+    'display:none',
+    'position:fixed',
+    'inset:0',
+    'z-index:9000',
+    'background:rgba(58,46,40,0.55)',
+    'backdrop-filter:blur(4px)',
+    '-webkit-backdrop-filter:blur(4px)',
+    'align-items:center',
+    'justify-content:center',
+    'padding:24px',
+  ].join(';');
+
+  modal.innerHTML = `
+    <div style="
+      background:#fff;
+      border-radius:20px;
+      border:1.5px solid #e8d9c5;
+      max-width:480px;
+      width:100%;
+      padding:48px 40px 40px;
+      text-align:center;
+      position:relative;
+      box-shadow:0 24px 60px rgba(58,46,40,0.18);
+      animation:osmSlideIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    ">
+      <button id="osmClose" aria-label="Close" style="
+        position:absolute;
+        top:16px;right:16px;
+        background:none;border:none;cursor:pointer;
+        font-size:1.4rem;color:#a08070;line-height:1;padding:4px 8px;
+      ">&times;</button>
+
+      <div style="font-size:2.8rem;margin-bottom:12px;">🎀</div>
+
+      <h2 id="osm-title" style="
+        font-family:var(--font-display,Georgia,serif);
+        font-size:1.55rem;
+        color:#3a2e28;
+        margin:0 0 12px;
+        font-weight:700;
+      ">Order sent!</h2>
+
+      <p style="color:#5a4a42;font-size:0.97rem;line-height:1.65;margin:0 0 8px;">
+        Your order has been received 🧵
+      </p>
+      <p style="color:#5a4a42;font-size:0.97rem;line-height:1.65;margin:0 0 24px;">
+        Check your inbox — I've sent you a confirmation email.<br>
+        I'll follow up within <strong>1–2 business days</strong> with a payment link,
+        and once payment reflects I'll begin making your pieces!
+      </p>
+
+      <button id="osmDone" style="
+        background:#c4706a;
+        color:#fff;
+        border:none;
+        border-radius:50px;
+        padding:14px 36px;
+        font-size:0.95rem;
+        font-weight:700;
+        cursor:pointer;
+        letter-spacing:0.02em;
+      ">✦ Got it — thank you! ✦</button>
+
+      <p style="margin:20px 0 0;font-size:0.82rem;color:#a08070;">
+        Questions? DM
+        <a href="https://www.instagram.com/sillystitches.za" target="_blank"
+           rel="noopener noreferrer"
+           style="color:#c4706a;font-weight:700;">@sillystitches.za</a>
+        or email
+        <a href="mailto:sillystitchesza@gmail.com"
+           style="color:#c4706a;font-weight:700;">sillystitchesza@gmail.com</a>
+      </p>
+    </div>
+
+    <style>
+      @keyframes osmSlideIn {
+        from { opacity:0; transform:translateY(24px) scale(0.96); }
+        to   { opacity:1; transform:translateY(0)    scale(1);    }
+      }
+    </style>
+  `;
+  document.body.appendChild(modal);
+
+  function openModal() {
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('osmDone').focus();
+  }
+  function closeModal() {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('osmClose').addEventListener('click', closeModal);
+  document.getElementById('osmDone').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+  });
+
+  // ── Form submission ────────────────────────────────────────
   form.addEventListener('submit', async (e) => {
-    e.preventDefault(); // prevent native form submit
+    e.preventDefault();
 
-    // ── Client-side validation ──
     if (!validateForm(form)) return;
 
-    // ── UI: loading state ──
     submitBtn.textContent = 'Sending…';
     submitBtn.disabled    = true;
-    successMsg.style.display = 'none';
-    errorMsg.style.display   = 'none';
+    errorMsg.style.display = 'none';
 
     try {
-      /*
-       * Encode form data as application/x-www-form-urlencoded
-       * This is what the Cloudflare Worker expects.
-       */
       const data = new URLSearchParams(new FormData(form)).toString();
 
       const response = await fetch(form.action, {
@@ -122,23 +226,18 @@
       });
 
       if (response.ok) {
-        // ── Success ──
-        successMsg.style.display = 'block';
         form.reset();
-
-        // Scroll to success message
-        successMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        openModal();
       } else {
         throw new Error(`Server responded with status ${response.status}`);
       }
 
     } catch (err) {
-      // ── Error ──
       console.error('Order submission error:', err);
       errorMsg.style.display = 'block';
+      errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } finally {
-      // Restore button
-      submitBtn.textContent = 'Send My Order ✦';
+      submitBtn.textContent = '✦ Send My Order ✦';
       submitBtn.disabled    = false;
     }
   });
