@@ -126,14 +126,10 @@ window.SILLY_STITCHES_PRODUCTS = {
      ──────────────────────────────────────────────── */
   prices: {
     'Large Baby Blue Floral Make-up Bag': 250,
-    'Sunflower Coaster Set':  18,
-    'Large Pink Floral Make-up Bag':       250,
-    'Large White Floral Make-up Bag':    250,
-    'Blush Plant Pot Cover':  22,
-    'Floral Tea Towel':       28,
-    'Terracotta Bookmark':     8,
-    'Jute Table Mat':         16,
-    'Mushroom Keychain':      12,
+    'Large Pink Floral Make-up Bag': 250,
+    'Large White Floral Make-up Bag': 250,
+    'Large Dark Blue Floral Make-up Bag': 250,
+    'Large Dark Green Floral Make-up Bag': 250,
     'Custom Name Hoop':       { from: true, amount: 38 },
     'Custom Order':           null,
   },
