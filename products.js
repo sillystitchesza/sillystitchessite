@@ -88,7 +88,7 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Red Bird Tote Front.JPG',
     ],
 
-    'Large White & Blue Floral Make-up Bag': [
+    'Large White and Blue Floral Make-up Bag': [
       'images/White & Blue Floral Front.JPG',
       'images/White & Blue Floral Side.JPG',
       'images/White & Blue Floral Top Open.JPG',
@@ -127,7 +127,7 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Large White Floral Make-up Bag': 250,
     'Large Dark Blue Floral Make-up Bag': 250,
     'Large Dark Green Floral Make-up Bag': 250,
-    'Large White & Blue Floral Make-up Bag': 250,
+    'Large White and Blue Floral Make-up Bag': 250,
     'Blue Bird Quilted Tote Bag':   350,
     'Red Bird Quilted Tote Bag':  350,
     'Custom Order':           null,
