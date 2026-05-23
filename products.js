@@ -34,6 +34,7 @@ window.SILLY_STITCHES_PRODUCTS = {
     // Add as many images as you like. They rotate automatically.
     images: [
       'images/Hands 3.JPG',
+      'images/Red Bird Tote Shoulder Tree.JPG'
       // 'images/Hands 1.JPG',     // <- uncomment / add your own
       // 'images/Hands 2.JPG',
     ],
@@ -77,24 +78,20 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Dark Green Open Top.JPG',
     ],
 
-    'Blue Bird Tote Bag': [
-      'https://images.unsplash.com/photo-1559521783-1d1599583485?w=800&q=80',
+    'Blue Bird Quilted Tote Bag': [
+      'images/Blue Bird Tote Shoulder.JPG',
+      'images/Blue Bird Tote Front.JPG',
     ],
 
-    'Terracotta Bookmark': [
-      'https://images.unsplash.com/photo-1608501078713-8e445a709b39?w=800&q=80',
+    'Red Bird Quilted Tote Bag': [
+      'images/Red Bird Tote Shoulder.JPG',
+      'images/Red Bird Tote Front.JPG',
     ],
 
-    'Jute Table Mat': [
-      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80',
-    ],
-
-    'Mushroom Keychain': [
-      'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=800&q=80',
-    ],
-
-    'Custom Name Hoop': [
-      'https://images.unsplash.com/photo-1545389336-cf090694435e?w=800&q=80',
+    'Large White & Blue Floral Make-up Bag': [
+      'images/White & Blue Floral Front.JPG',
+      'images/White & Blue Floral Side.JPG',
+      'images/White & Blue Floral Top Open.JPG',
     ],
 
     // Add new products here, e.g.
@@ -130,7 +127,9 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Large White Floral Make-up Bag': 250,
     'Large Dark Blue Floral Make-up Bag': 250,
     'Large Dark Green Floral Make-up Bag': 250,
-    'Custom Name Hoop':       { from: true, amount: 38 },
+    'Large White & Blue Floral Make-up Bag': 250,
+    'Blue Bird Quilted Tote Bag': 350,
+    'Red Bird Quilted Tote Bag': 350,
     'Custom Order':           null,
   },
 
