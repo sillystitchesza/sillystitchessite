@@ -128,8 +128,8 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Large Dark Blue Floral Make-up Bag': 250,
     'Large Dark Green Floral Make-up Bag': 250,
     'Large White & Blue Floral Make-up Bag': 250,
-    'Blue Bird Quilted Tote Bag': 350,
-    'Red Bird Quilted Tote Bag': 350,
+    'Blue Bird Quilted Tote Bag':   350,
+    'Red Bird Quilted Tote Bag':  350,
     'Custom Order':           null,
   },
 
