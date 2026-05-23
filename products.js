@@ -39,7 +39,7 @@ window.SILLY_STITCHES_PRODUCTS = {
       // 'images/Hands 2.JPG',
     ],
     intervalMs: 4500,        // how long each image stays visible (ms)
-    animation:  'flip',      // 'flip' (card-flip) or 'fade' (crossfade)
+    animation:  'fade',      // 'flip' (card-flip) or 'fade' (crossfade)
   },
 
 
