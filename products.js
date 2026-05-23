@@ -34,7 +34,7 @@ window.SILLY_STITCHES_PRODUCTS = {
     // Add as many images as you like. They rotate automatically.
     images: [
       'images/Hands 3.JPG',
-      'images/Red Bird Tote Shoulder Tree.JPG'
+      'images/Red Bird Tote Shoulder Tree.JPG',
       // 'images/Hands 1.JPG',     // <- uncomment / add your own
       // 'images/Hands 2.JPG',
     ],
