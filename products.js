@@ -48,7 +48,6 @@ window.SILLY_STITCHES_PRODUCTS = {
      ──────────────────────────────────────────────── */
   products: {
 
-    // ── Featured on home page ────────────────────
     'Large Baby Blue Floral Make-up Bag': [
       'images/Bee Bag 1.JPG',
       'images/Bee Bag 2.JPG',
@@ -67,7 +66,6 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Green&White Open Side.JPG',
     ],
 
-    // ── Other shop products ──────────────────────
     'Large Dark Blue Floral Make-up Bag': [
       'images/Dark Blue Oblique.JPG',
       'images/Dark Blue Oblique 2.JPG',
@@ -92,6 +90,10 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/White & Blue Floral Front.JPG',
       'images/White & Blue Floral Side.JPG',
       'images/White & Blue Floral Top Open.JPG',
+    ],
+
+      'Cream Floral Baguette Bag': [
+      'images/Cream Floral Baguette Bag.JPG',
     ],
 
     // Add new products here, e.g.
@@ -130,6 +132,7 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Large White and Blue Floral Make-up Bag': 250,
     'Blue Bird Quilted Tote Bag':   350,
     'Red Bird Quilted Tote Bag':  350,
+    'Cream Floral Baguette Bag':  300,
     'Custom Order':           null,
   },
 
