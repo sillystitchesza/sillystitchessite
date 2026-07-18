@@ -74,6 +74,9 @@
   function showDelivery(on) {
     if (addressGroup)   addressGroup.style.display   = on ? 'block' : 'none';
     if (collectionOpts) collectionOpts.style.display = on ? 'none'  : 'block';
+    /* Address is only required when delivering */
+    const addressField = document.getElementById('address');
+    if (addressField) addressField.required = on;
   }
 
   if (deliveryCheck) {
@@ -218,21 +221,39 @@
   /* ── Validation ───────────────────────────────────────────── */
   function validateForm() {
     let valid = true;
+
+    function markInvalid(field) {
+      field.style.borderColor = 'var(--red-muted)';
+      field.style.boxShadow   = '0 0 0 4px rgba(196,112,106,0.2)';
+      if (valid) field.focus();
+      valid = false;
+      field.addEventListener('input', () => {
+        field.style.borderColor = field.style.boxShadow = '';
+      }, { once: true });
+      field.addEventListener('change', () => {
+        field.style.borderColor = field.style.boxShadow = '';
+      }, { once: true });
+    }
+
     form.querySelectorAll('[required]').forEach(field => {
       field.style.borderColor = '';
       field.style.boxShadow   = '';
       if (!field.offsetParent) return; // skip hidden fields
-      const val = field.value.trim();
-      if (!val || (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))) {
-        field.style.borderColor = 'var(--red-muted)';
-        field.style.boxShadow   = '0 0 0 4px rgba(196,112,106,0.2)';
-        if (valid) field.focus();
-        valid = false;
-        field.addEventListener('input', () => {
-          field.style.borderColor = field.style.boxShadow = '';
-        }, { once: true });
-      }
+      const val = (field.value || '').trim();
+      const bad =
+        !val ||
+        (field.type === 'email'  && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) ||
+        (field.type === 'number' && !field.checkValidity()); // catches min/max/step
+      if (bad) markInvalid(field);
     });
+
+    /* Belt & braces: at least one product must actually be chosen,
+       regardless of visibility quirks in the loop above. */
+    const selects = form.querySelectorAll('#orderItemsList select');
+    if (selects.length && ![...selects].some(s => s.value)) {
+      markInvalid(selects[0]);
+    }
+
     return valid;
   }
 }());

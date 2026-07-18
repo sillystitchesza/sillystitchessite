@@ -23,6 +23,12 @@ const ALLOWED_PRODUCTS = [
   'Large Dark Blue Floral Make-up Bag',
   'Large Dark Green Floral Make-up Bag',
   'Large White and Blue Floral Make-up Bag',
+  'Medium Baby Blue Floral Make-up Bag',
+  'Medium Pink Floral Make-up Bag',
+  'Medium White Floral Make-up Bag',
+  'Medium Dark Blue Floral Make-up Bag',
+  'Medium Dark Green Floral Make-up Bag',
+  'Medium White and Blue Floral Make-up Bag',
   'Blue Bird Quilted Tote Bag',
   'Red Bird Quilted Tote Bag',
   'Cream Floral Baguette Bag',
@@ -68,9 +74,14 @@ export async function onRequestPost(context) {
     const collectRaw = clean(params.get('collection_location'), 50);
     const collect  = ALLOWED_COLLECTIONS.includes(collectRaw) ? collectRaw : 'To be confirmed';
 
-    const products   = params.getAll('product[]').map(v => clean(v, 100)).filter(Boolean);
+    /* Pair each product with its quantity BY ROW INDEX first, then drop
+       empty rows — filtering products before pairing would shift the
+       quantities onto the wrong products. */
+    const products   = params.getAll('product[]').map(v => clean(v, 100));
     const quantities = params.getAll('quantity[]').map(v => clean(v, 5));
-    const items      = products.map((p, i) => ({ product: p, quantity: quantities[i] || '1' }));
+    const items      = products
+      .map((p, i) => ({ product: p, quantity: quantities[i] || '1' }))
+      .filter(it => it.product);
 
     /* Validation */
     const errors = [];
