@@ -7,6 +7,8 @@
   <title>Order — Silly Stitches</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="images/logo.jpeg" />
+  <!-- Cloudflare Turnstile (bot protection) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 
@@ -101,6 +103,12 @@
                 autocomplete="email"
               />
               <p class="form-hint">I'll reply to this address to confirm your order.</p>
+            </div>
+
+            <!-- Honeypot: invisible to humans, bots auto-fill it. Leave empty! -->
+            <div style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;" aria-hidden="true">
+              <label for="website">Website</label>
+              <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
             </div>
 
             <!-- Product name & quantity row -->
@@ -240,6 +248,13 @@
               Hidden until at least one product is selected.
             -->
             <div id="orderTotal" aria-live="polite"></div>
+
+            <!--
+              CLOUDFLARE TURNSTILE (bot protection)
+              REPLACE data-sitekey with your Site Key from
+              Cloudflare dashboard → Turnstile → Add widget.
+            -->
+            <div class="cf-turnstile" data-sitekey="0x4AAAAAAD4roVADjEJsxIQD" data-theme="light" style="margin-top:24px;"></div>
 
             <!-- Submit -->
             <button type="submit" class="btn btn-primary form-submit" id="submitBtn">

@@ -8,24 +8,67 @@ const SHOP_NAME   = 'Silly Stitches';
 const FROM_EMAIL  = 'orders@sillystitches.co.za';
 const LOGO_URL    = 'https://sillystitches.co.za/images/logo.jpeg';
 
+/* ── Security config ─────────────────────────────────────── */
+const ALLOWED_ORIGINS = [
+  'https://sillystitches.co.za',
+  'https://www.sillystitches.co.za',
+];
+
+/* Must match the <option> values in order.html */
+const ALLOWED_PRODUCTS = [
+  'Custom Order',
+  'Large Baby Blue Floral Make-up Bag',
+  'Large Pink Floral Make-up Bag',
+  'Large White Floral Make-up Bag',
+  'Large Dark Blue Floral Make-up Bag',
+  'Large Dark Green Floral Make-up Bag',
+  'Large White and Blue Floral Make-up Bag',
+  'Blue Bird Quilted Tote Bag',
+  'Red Bird Quilted Tote Bag',
+];
+
+const ALLOWED_COLLECTIONS = ['Sea Point', 'Rondebosch', 'Century City'];
+const MAX_ITEMS = 10;
+const MAX_QTY   = 20;
+
 
 export async function onRequestPost(context) {
   try {
+    /* Origin check — block cross-site / scripted submissions */
+    const origin = context.request.headers.get('Origin');
+    if (origin && !ALLOWED_ORIGINS.includes(origin))
+      return json({ error: 'Forbidden.' }, 403);
+
     const ct = context.request.headers.get('Content-Type') || '';
     if (!ct.includes('application/x-www-form-urlencoded'))
       return json({ error: 'Unsupported content type.' }, 415);
 
     const params = new URLSearchParams(await context.request.text());
 
-    const name     = (params.get('name')    || '').trim();
-    const email    = (params.get('email')   || '').trim();
-    const notes    = (params.get('notes')   || '').trim();
-    const delivery = params.get('delivery') === 'yes';
-    const address  = (params.get('address') || '').trim();
-    const collect  = (params.get('collection_location') || 'To be confirmed').trim();
+    /* Honeypot — hidden field humans never fill. Pretend success, send nothing. */
+    if ((params.get('website') || '').trim())
+      return json({ success: true }, 200);
 
-    const products   = params.getAll('product[]').map(v => v.trim()).filter(Boolean);
-    const quantities = params.getAll('quantity[]').map(v => v.trim());
+    /* Turnstile verification — proves the request came from a real browser session */
+    const tsSecret = context.env.TURNSTILE_SECRET_KEY;
+    if (!tsSecret) { console.error('TURNSTILE_SECRET_KEY not set'); return json({ error: 'Server config error.' }, 500); }
+    const tsOk = await verifyTurnstile(
+      tsSecret,
+      params.get('cf-turnstile-response'),
+      context.request.headers.get('CF-Connecting-IP')
+    );
+    if (!tsOk) return json({ error: 'Bot check failed. Please refresh the page and try again.' }, 403);
+
+    const name     = clean(params.get('name'), 100);
+    const email    = clean(params.get('email'), 254);
+    const notes    = clean(params.get('notes'), 2000, true);
+    const delivery = params.get('delivery') === 'yes';
+    const address  = clean(params.get('address'), 500, true);
+    const collectRaw = clean(params.get('collection_location'), 50);
+    const collect  = ALLOWED_COLLECTIONS.includes(collectRaw) ? collectRaw : 'To be confirmed';
+
+    const products   = params.getAll('product[]').map(v => clean(v, 100)).filter(Boolean);
+    const quantities = params.getAll('quantity[]').map(v => clean(v, 5));
     const items      = products.map((p, i) => ({ product: p, quantity: quantities[i] || '1' }));
 
     /* Validation */
@@ -33,10 +76,12 @@ export async function onRequestPost(context) {
     if (!name)                          errors.push('Name is required.');
     if (!email || !validEmail(email))   errors.push('A valid email is required.');
     if (!items.length)                  errors.push('At least one product is required.');
+    if (items.length > MAX_ITEMS)       errors.push('A maximum of ' + MAX_ITEMS + ' items per order, please.');
     items.forEach(({ product, quantity }, i) => {
       const l = items.length > 1 ? ' (item ' + (i+1) + ')' : '';
-      if (!product)                                               errors.push('Product' + l + ' is required.');
-      if (!quantity || isNaN(+quantity) || parseInt(quantity) < 1) errors.push('Quantity' + l + ' must be at least 1.');
+      if (!ALLOWED_PRODUCTS.includes(product))                     errors.push('Unknown product' + l + '.');
+      const q = parseInt(quantity, 10);
+      if (isNaN(q) || q < 1 || q > MAX_QTY)                        errors.push('Quantity' + l + ' must be between 1 and ' + MAX_QTY + '.');
     });
     if (errors.length) return json({ error: errors.join(' ') }, 400);
 
@@ -94,8 +139,42 @@ async function send(key, { from, to, replyTo, subject, text, html }) {
 function json(data, status) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0] },
   });
+}
+
+/* Verify a Cloudflare Turnstile token server-side */
+async function verifyTurnstile(secret, token, ip) {
+  if (!token) return false;
+  try {
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, response: token, remoteip: ip || undefined }),
+    });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return j.success === true;
+  } catch (e) {
+    console.error('Turnstile verify error:', e);
+    return false;
+  }
+}
+
+/* Trim, cap length, strip control characters (keeps newlines when multiline) */
+function clean(v, max, multiline) {
+  v = String(v || '');
+  v = multiline
+    ? v.replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    : v.replace(/[\u0000-\u001F\u007F]/g, ' ');
+  return v.trim().slice(0, max);
+}
+
+/* Escape user-supplied values before embedding them in HTML emails */
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
@@ -132,8 +211,15 @@ function ownerText({ name, email, items, notes, delivery, address, collect }) {
 }
 
 function ownerHtml({ name, email, items, notes, delivery, address, collect }) {
+  /* Escape everything user-supplied before it touches HTML */
+  name    = esc(name);
+  email   = esc(email);
+  notes   = esc(notes).replace(/\n/g, '<br>');
+  address = esc(address).replace(/\n/g, '<br>');
+  collect = esc(collect);
+
   const itemRows = items.map((it, i) =>
-    row('Item ' + (i+1), '<strong>' + it.product + '</strong> &nbsp;x&nbsp; ' + it.quantity)
+    row('Item ' + (i+1), '<strong>' + esc(it.product) + '</strong> &nbsp;x&nbsp; ' + esc(it.quantity))
   ).join('');
 
   const fulfilment = delivery
@@ -195,8 +281,13 @@ function custText({ name, items, delivery, address, collect }) {
 }
 
 function custHtml({ name, items, delivery, address, collect }) {
+  /* Escape everything user-supplied before it touches HTML */
+  name    = esc(name);
+  address = esc(address).replace(/\n/g, '<br>');
+  collect = esc(collect);
+
   const itemRows = items.map((it, i) =>
-    row('Item ' + (i+1), '<strong>' + it.product + '</strong> &nbsp;x&nbsp; ' + it.quantity)
+    row('Item ' + (i+1), '<strong>' + esc(it.product) + '</strong> &nbsp;x&nbsp; ' + esc(it.quantity))
   ).join('');
 
   const fulfilRow = delivery

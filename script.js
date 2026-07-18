@@ -64,6 +64,7 @@
 
   const submitBtn       = document.getElementById('submitBtn');
   const errorMsg        = document.getElementById('errorMsg');
+  const errorDefault    = errorMsg ? errorMsg.innerHTML : '';
 
   /* ── Delivery toggle ──────────────────────────────────────── */
   const deliveryCheck   = document.getElementById('deliveryCheck');
@@ -141,6 +142,14 @@
     e.preventDefault();
     if (!validateForm()) return;
 
+    /* Require a Turnstile token before sending (widget may still be loading) */
+    const tsField = form.querySelector('[name="cf-turnstile-response"]');
+    if (tsField && !tsField.value) {
+      errorMsg.textContent   = 'Please wait a moment for the security check to complete, then try again.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+
     submitBtn.textContent  = 'Sending…';
     submitBtn.disabled     = true;
     errorMsg.style.display = 'none';
@@ -163,11 +172,14 @@
 
     } catch (err) {
       console.error('Order error:', err);
+      errorMsg.innerHTML     = errorDefault;
       errorMsg.style.display = 'block';
       errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } finally {
       submitBtn.textContent = '✦ Send My Order ✦';
       submitBtn.disabled    = false;
+      /* Turnstile tokens are single-use — get a fresh one for the next attempt */
+      if (window.turnstile) { try { window.turnstile.reset(); } catch (_) {} }
     }
   });
 
