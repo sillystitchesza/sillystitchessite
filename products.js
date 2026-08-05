@@ -136,7 +136,7 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Cream Baguette Bag V1.1.JPG',
       'images/Cream Baguette Bag V1.2.JPG',
       'images/Cream Baguette Bag V2.1.JPG',
-      'images/Cream Baguette Bag V2.2.jpg',
+      'images/Cream Baguette Bag V2.2.JPG',
       'images/Cream Baguette Bag Inside.JPG',
     ],
 
