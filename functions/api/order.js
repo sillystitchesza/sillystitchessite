@@ -29,9 +29,10 @@ const ALLOWED_PRODUCTS = [
   'Medium Dark Blue Floral Make-up Bag',
   'Medium Dark Green Floral Make-up Bag',
   'Medium White and Blue Floral Make-up Bag',
-  'Blue Bird Quilted Tote Bag',
   'Red Bird Quilted Tote Bag',
   'Cream Floral Baguette Bag',
+  'Cream and Blue Floral Baguette Bag',
+  'Black Floral Baguette Bag',
 ];
 
 const ALLOWED_COLLECTIONS = ['Sea Point', 'Rondebosch', 'Century City'];

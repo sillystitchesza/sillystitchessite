@@ -76,11 +76,6 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Dark Green Open Top.JPG',
     ],
 
-    'Blue Bird Quilted Tote Bag': [
-      'images/Blue Bird Tote Shoulder.JPG',
-      'images/Blue Bird Tote Front.JPG',
-    ],
-
     'Red Bird Quilted Tote Bag': [
       'images/Red Bird Tote Shoulder.JPG',
       'images/Red Bird Tote Front.JPG',
@@ -131,6 +126,20 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/White & Blue Floral Top Open.JPG',
     ],
 
+    'Black Floral Baguette Bag': [
+      'images/Black Baguette Bag.JPG',
+      'images/Black Baguette Bag 2.JPG',
+      'images/Black Baguette Bag Inside.JPG',
+    ],
+
+    'Cream and Blue Floral Baguette Bag': [
+      'images/Cream Baguette Bag V1.1.JPG',
+      'images/Cream Baguette Bag V1.2.JPG',
+      'images/Cream Baguette Bag V2.1.JPG',
+      'images/Cream Baguette Bag V2.2.JPG',
+      'images/Cream Baguette Bag Inside.JPG',
+    ],
+
     // Add new products here, e.g.
     //
     //   'Lavender Pouch': [
@@ -171,9 +180,10 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Medium Dark Blue Floral Make-up Bag': 185,
     'Medium Dark Green Floral Make-up Bag': 185,
     'Medium White and Blue Floral Make-up Bag': 185,
-    'Blue Bird Quilted Tote Bag':   350,
     'Red Bird Quilted Tote Bag':  350,
     'Cream Floral Baguette Bag':  300,
+    'Cream and Blue Floral Baguette Bag':  300,
+    'Black Floral Baguette Bag':  300,
     'Custom Order':           null,
   },
 
