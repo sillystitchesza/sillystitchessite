@@ -316,6 +316,14 @@ function _getProductImages(name) {
   return (d && d.products && d.products[name]) || [];
 }
 
+/* Loud, specific console warning when a photo 404s. Note that the live site
+   is case-sensitive ('.jpg' and '.JPG' are different files) even though
+   Windows is not, so a path that works locally can still break once pushed. */
+function _warnMissing(src, product) {
+  console.warn('[Silly Stitches] Image not found: ' + src +
+               ' — fix the path in products.js / the product card for "' + product + '".');
+}
+
 
 /* ============================================================
    6. HERO CAROUSEL
@@ -372,6 +380,13 @@ function _getProductImages(name) {
     if (!box) return;
 
     if (images.length < 2) {
+      /* products.js is the single source of truth — keep the card's static
+         <img> in step with it, and warn loudly if the file is missing. */
+      const only = box.querySelector('img');
+      if (only) {
+        if (only.getAttribute('src') !== images[0]) only.src = images[0];
+        only.addEventListener('error', () => _warnMissing(only.getAttribute('src'), name));
+      }
       box.style.cursor = 'zoom-in';
       box.addEventListener('click', e => {
         if (!e.target.closest('a, button')) window.SillyStitchesLightbox.open(images, 0, name);
@@ -389,20 +404,40 @@ function _getProductImages(name) {
       const img = document.createElement('img');
       img.src = src; img.alt = alt; img.loading = i ? 'lazy' : 'eager';
       img.className = 'carousel-layer' + (i ? '' : ' active');
+      /* A missing file (typo, renamed photo, wrong .JPG/.jpg case) must not
+         leave a blank frame in the slideshow — mark it dead and skip it. */
+      img.addEventListener('error', () => {
+        img.dataset.dead = '1';
+        _warnMissing(src, name);
+        if (img.classList.contains('active')) show(idx + 1);
+      });
       box.appendChild(img);
     });
 
     const layers = box.querySelectorAll('.carousel-layer');
     let idx = 0, timer;
 
+    /* Only hand the lightbox photos that actually loaded. */
+    function liveImages() {
+      const live = [...layers].filter(l => !l.dataset.dead).map(l => l.getAttribute('src'));
+      return live.length ? live : images;
+    }
+
     box.style.cursor = 'zoom-in';
     box.addEventListener('click', e => {
-      if (!e.target.closest('a, button')) window.SillyStitchesLightbox.open(images, idx, name);
+      if (e.target.closest('a, button')) return;
+      const live = liveImages();
+      const at   = live.indexOf(layers[idx].getAttribute('src'));
+      window.SillyStitchesLightbox.open(live, at < 0 ? 0 : at, name);
     });
 
     function show(i) {
+      const n = layers.length;
+      let t = ((i % n) + n) % n;
+      for (let k = 0; k < n && layers[t].dataset.dead; k++) t = (t + 1) % n;
+      if (layers[t].dataset.dead) return;   // every photo failed — leave as-is
       layers[idx].classList.remove('active');
-      idx = i % layers.length;
+      idx = t;
       layers[idx].classList.add('active');
     }
     card.addEventListener('mouseenter', () => { timer = setInterval(() => show(idx + 1), 900); });
@@ -518,21 +553,25 @@ function _getProductImages(name) {
 
   function updatePreview() {
     const its = items();
-    if (!its.length) { host.innerHTML = ''; host.classList.remove('visible'); return; }
+
+    const cells = its.map(({ name, qty }) => {
+      const src = (_getProductImages(name) || [])[0];
+      if (!src) return '';
+      return '<div class="op-item">' +
+        '<button type="button" class="op-thumb" data-product="' + name + '" aria-label="View ' + name + '">' +
+        '<img src="' + src + '" alt="' + name + '" loading="lazy" />' +
+        (qty > 1 ? '<span class="op-qty-badge">&times;' + qty + '</span>' : '') +
+        '</button><span class="op-item-label">' + name + '</span></div>';
+    }).join('');
+
+    /* Nothing with a photo is selected (e.g. only "Custom Order") — stay
+       hidden rather than printing an empty "You're ordering:" box. */
+    if (!cells) { host.innerHTML = ''; host.classList.remove('visible'); return; }
 
     host.innerHTML =
       '<div class="op-header"><strong>You\'re ordering:</strong></div>' +
-      '<div class="op-strip">' +
-      its.map(({ name, qty }) => {
-        const src = (_getProductImages(name) || [])[0];
-        if (!src) return '';
-        return '<div class="op-item">' +
-          '<button type="button" class="op-thumb" data-product="' + name + '" aria-label="View ' + name + '">' +
-          '<img src="' + src + '" alt="' + name + '" loading="lazy" />' +
-          (qty > 1 ? '<span class="op-qty-badge">&times;' + qty + '</span>' : '') +
-          '</button><span class="op-item-label">' + name + '</span></div>';
-      }).join('') +
-      '</div><p class="op-hint">Click any image to enlarge</p>';
+      '<div class="op-strip">' + cells + '</div>' +
+      '<p class="op-hint">Click any image to enlarge</p>';
 
     host.classList.add('visible');
     host.querySelectorAll('.op-thumb').forEach(btn => {
