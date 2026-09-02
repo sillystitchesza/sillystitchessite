@@ -76,6 +76,14 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Dark Green Open Top.JPG',
     ],
 
+    'Large Red Make-up Bag': [
+      'images/Red Oblique.jpg',
+      'images/Red Oblique Top.jpg',
+      'images/Red Bag Front.jpg',
+      'images/Red Bag Top.jpg',
+      'images/Red Bag Top Open.jpg',
+    ],
+
     'Red Bird Quilted Tote Bag': [
       'images/Red Bird Tote Shoulder.JPG',
       'images/Red Bird Tote Front.JPG',
@@ -91,7 +99,8 @@ window.SILLY_STITCHES_PRODUCTS = {
       'images/Cream Floral Baguette Bag.JPG',
     ],
 
-    /* Medium make-up bags — same photos as the large versions */
+    /* Medium make-up bags — these reuse the large versions' photos,
+       except White Floral which now has its own set below. */
     'Medium Baby Blue Floral Make-up Bag': [
       'images/Bee Bag 1.JPG',
       'images/Bee Bag 2.JPG',
@@ -105,9 +114,11 @@ window.SILLY_STITCHES_PRODUCTS = {
     ],
 
     'Medium White Floral Make-up Bag': [
-      'images/Green&White Open Oblique.JPG',
-      'images/Green&White Front.JPG',
-      'images/Green&White Open Side.JPG',
+      'images/Medium Green&White Oblique.jpg',
+      'images/Medium Green&White Oblique 2.jpg',
+      'images/Medium Green&White Front.jpg',
+      'images/Medium Green&White Top.jpg',
+      'images/Medium Green&White Open.jpg',
     ],
 
     'Medium Dark Blue Floral Make-up Bag': [
@@ -174,6 +185,7 @@ window.SILLY_STITCHES_PRODUCTS = {
     'Large Dark Blue Floral Make-up Bag': 250,
     'Large Dark Green Floral Make-up Bag': 250,
     'Large White and Blue Floral Make-up Bag': 250,
+    'Large Red Make-up Bag': 250,
     'Medium Baby Blue Floral Make-up Bag': 185,
     'Medium Pink Floral Make-up Bag': 185,
     'Medium White Floral Make-up Bag': 185,

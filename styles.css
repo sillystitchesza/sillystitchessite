@@ -4,7 +4,7 @@
    ============================================ */
 
 /* ---------- Google Fonts ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&display=swap');
 
 /* ---------- CSS Variables (Color Palette) ---------- */
 :root {
@@ -538,6 +538,17 @@ h1, h2, h3, h4 {
   font-size: 1.05rem;
   color: var(--text-dark);
   font-weight: 600;
+}
+
+/* Size prefix ("Large" / "Medium") called out so shoppers can tell the
+   two variants apart at a glance: extra-bold and in the same red as the
+   price. Needs Playfair 800, which is requested in the @import at the top
+   of this file — without it the browser falls back to the 600 face and the
+   weight does nothing. */
+.product-name strong {
+  font-weight: 800;
+  color: var(--red-muted);
+  letter-spacing: 0.005em;
 }
 
 .product-desc {
@@ -1893,4 +1904,186 @@ h1, h2, h3, h4 {
   margin-top: -8px;
   margin-bottom: 32px;
   min-height: 1.2em; /* prevents layout jump when text clears */
+}
+
+
+/* ============================================
+   CUSTOMER REVIEWS — scrolling bar (home)
+   ────────────────────────────────────────────
+   Content comes from reviews.js; the track and
+   its cards are built by script.js (section 10).
+   Two CSS variables are set from JS:
+     --rm-shift     how far one full set travels
+     --rm-duration  time for that trip (constant speed)
+   ============================================ */
+.reviews {
+  background-color: var(--white);
+  border-top: 1px solid var(--beige);
+  border-bottom: 1px solid var(--beige);
+  overflow: hidden;
+}
+
+.reviews .section-subtitle {
+  margin-bottom: 40px;
+}
+
+/* Viewport for the moving track */
+.review-marquee {
+  position: relative;
+  overflow: hidden;
+  /* Cards fade in and out at the edges instead of being cut off */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 7%, #000 93%, transparent 100%);
+}
+
+.review-track {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  width: max-content;
+  padding: 4px 0 10px;
+  will-change: transform;
+  animation: ss-review-scroll var(--rm-duration, 60s) linear infinite;
+}
+
+@keyframes ss-review-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(calc(-1 * var(--rm-shift, 0px)), 0, 0); }
+}
+
+/* Few enough reviews to fit across the screen: no motion, just centred.
+   Set by script.js when one full set is narrower than the viewport. */
+.review-marquee.is-static {
+  -webkit-mask-image: none;
+          mask-image: none;
+}
+
+.review-marquee.is-static .review-track {
+  animation: none;
+  margin-left: auto;
+  margin-right: auto;
+  transform: none;
+  will-change: auto;
+}
+
+/* Pause on hover, on keyboard focus, and while off-screen or touched */
+.review-marquee:hover  .review-track,
+.review-marquee:focus-within .review-track,
+.review-marquee.is-paused    .review-track {
+  animation-play-state: paused;
+}
+
+/* ---------- One review card ---------- */
+.review-card {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  background-color: var(--cream);
+  border: 1.5px solid var(--beige);
+  border-radius: var(--radius-lg);
+  padding: 26px 28px 22px;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.review-card:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-3px);
+}
+
+.review-stars {
+  display: flex;
+  gap: 3px;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Unearned stars keep the exact same shape, just drained of colour */
+.review-star.is-empty {
+  filter: grayscale(1);
+  opacity: 0.3;
+}
+
+/* "What they ordered" pill */
+.review-product {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--red-deep);
+  background-color: var(--pink-soft);
+  border: 1px solid var(--pink-mid);
+  border-radius: var(--radius-xl);
+  padding: 4px 13px;
+  white-space: nowrap;
+}
+
+.review-text {
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-mid);
+  line-height: 1.65;
+  flex: 1 1 auto;   /* pushes the name/date row to the bottom of every card */
+}
+
+.review-text::before {
+  content: '\201C';
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 0;
+  color: var(--pink-mid);
+  margin-right: 3px;
+  vertical-align: -0.28em;
+}
+
+.review-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding-top: 13px;
+  border-top: 1px solid var(--beige);
+}
+
+.review-name {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.review-date {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+/* ---------- Reduced motion: a swipeable strip, no animation ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .review-track {
+    animation: none;
+  }
+  .review-marquee {
+    overflow-x: auto;
+    -webkit-mask-image: none;
+            mask-image: none;
+    scroll-snap-type: x proximity;
+  }
+  .review-card {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 600px) {
+  .review-track {
+    gap: 18px;
+  }
+  .review-card {
+    flex-basis: 272px;
+    padding: 22px 24px 18px;
+  }
 }

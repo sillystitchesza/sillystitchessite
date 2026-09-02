@@ -29,6 +29,7 @@ const ALLOWED_PRODUCTS = [
   'Medium Dark Blue Floral Make-up Bag',
   'Medium Dark Green Floral Make-up Bag',
   'Medium White and Blue Floral Make-up Bag',
+  'Large Red Make-up Bag',
   'Red Bird Quilted Tote Bag',
   'Cream Floral Baguette Bag',
   'Cream and Blue Floral Baguette Bag',
@@ -72,6 +73,7 @@ export async function onRequestPost(context) {
     const notes    = clean(params.get('notes'), 2000, true);
     const delivery = params.get('delivery') === 'yes';
     const address  = clean(params.get('address'), 500, true);
+    const phone    = clean(params.get('phone'), 40);
     const collectRaw = clean(params.get('collection_location'), 50);
     const collect  = ALLOWED_COLLECTIONS.includes(collectRaw) ? collectRaw : 'To be confirmed';
 
@@ -90,6 +92,9 @@ export async function onRequestPost(context) {
     if (!email || !validEmail(email))   errors.push('A valid email is required.');
     if (!items.length)                  errors.push('At least one product is required.');
     if (items.length > MAX_ITEMS)       errors.push('A maximum of ' + MAX_ITEMS + ' items per order, please.');
+    /* Delivery orders need somewhere to send it and someone to call. */
+    if (delivery && !address)           errors.push('A delivery address is required.');
+    if (delivery && !validPhone(phone)) errors.push('A valid contact number is required for delivery.');
     items.forEach(({ product, quantity }, i) => {
       const l = items.length > 1 ? ' (item ' + (i+1) + ')' : '';
       if (!ALLOWED_PRODUCTS.includes(product))                     errors.push('Unknown product' + l + '.');
@@ -107,8 +112,8 @@ export async function onRequestPost(context) {
       to:      OWNER_EMAIL,
       replyTo: email,
       subject: '\u2756 New order from ' + name + ' \u2014 ' + items[0].product + (items.length > 1 ? ' + ' + (items.length-1) + ' more' : ''),
-      text:    ownerText({ name, email, items, notes, delivery, address, collect }),
-      html:    ownerHtml({ name, email, items, notes, delivery, address, collect }),
+      text:    ownerText({ name, email, phone, items, notes, delivery, address, collect }),
+      html:    ownerHtml({ name, email, phone, items, notes, delivery, address, collect }),
     });
     if (!ownerOk) return json({ error: 'Failed to send. Please email us directly.' }, 502);
 
@@ -117,8 +122,8 @@ export async function onRequestPost(context) {
       from:    'Emma @ ' + SHOP_NAME + ' <' + FROM_EMAIL + '>',
       to:      email,
       subject: 'Your Silly Stitches order has been received! \uD83E\uDDF5',
-      text:    custText({ name, items, delivery, address, collect }),
-      html:    custHtml({ name, items, delivery, address, collect }),
+      text:    custText({ name, phone, items, delivery, address, collect }),
+      html:    custHtml({ name, phone, items, delivery, address, collect }),
     });
     if (!custOk) console.warn('Customer confirmation email failed (non-fatal).');
 
@@ -192,20 +197,30 @@ function esc(s) {
 
 function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
 
+/* Mirrors the check in script.js: 9–15 digits, punctuation ignored. */
+function validPhone(v) {
+  const d = String(v || '').replace(/\D/g, '');
+  return d.length >= 9 && d.length <= 15;
+}
+
+/* Strip a phone number down to something safe for a tel: href */
+function telHref(v) { return String(v || '').replace(/[^\d+]/g, ''); }
+
 function itemLines(items) {
   return items.map((it, i) => '  ' + (i+1) + '. ' + it.product + '  x' + it.quantity).join('\n');
 }
 
-function fulfilmentText(delivery, address, collect) {
+function fulfilmentText(delivery, address, collect, phone) {
   return delivery
-    ? 'Delivery  : Yes\nAddress   : ' + (address || 'Not provided')
+    ? 'Delivery  : Yes\nAddress   : ' + (address || 'Not provided') +
+      '\nPhone     : ' + (phone || 'Not provided')
     : 'Delivery  : No - collecting\nLocation  : ' + collect;
 }
 
 
 /* ── Owner email ─────────────────────────────────────────── */
 
-function ownerText({ name, email, items, notes, delivery, address, collect }) {
+function ownerText({ name, email, phone, items, notes, delivery, address, collect }) {
   return [
     'New order - Silly Stitches',
     '================================',
@@ -215,7 +230,7 @@ function ownerText({ name, email, items, notes, delivery, address, collect }) {
     'Items:',
     itemLines(items),
     '',
-    fulfilmentText(delivery, address, collect),
+    fulfilmentText(delivery, address, collect, phone),
     '',
     'Notes    : ' + (notes || 'None'),
     '================================',
@@ -223,8 +238,10 @@ function ownerText({ name, email, items, notes, delivery, address, collect }) {
   ].join('\n');
 }
 
-function ownerHtml({ name, email, items, notes, delivery, address, collect }) {
+function ownerHtml({ name, email, phone, items, notes, delivery, address, collect }) {
   /* Escape everything user-supplied before it touches HTML */
+  const phoneLink = esc(telHref(phone));
+  const phoneText = esc(phone);
   name    = esc(name);
   email   = esc(email);
   notes   = esc(notes).replace(/\n/g, '<br>');
@@ -236,7 +253,11 @@ function ownerHtml({ name, email, items, notes, delivery, address, collect }) {
   ).join('');
 
   const fulfilment = delivery
-    ? 'Delivery<br><span style="font-size:.85rem;color:#5a4a42;">' + (address || '<em>Not provided</em>') + '</span>'
+    ? 'Delivery<br><span style="font-size:.85rem;color:#5a4a42;">' + (address || '<em>Not provided</em>') + '</span>' +
+      (phoneText
+        ? '<br><span style="font-size:.85rem;">&#128222; <a href="tel:' + phoneLink +
+          '" style="color:#c4706a;font-weight:700;">' + phoneText + '</a></span>'
+        : '<br><span style="font-size:.85rem;color:#a08070;"><em>No phone number given</em></span>')
     : 'Collection — <strong>' + collect + '</strong><br><span style="font-size:.82rem;color:#a08070;">Details confirmed over email</span>';
 
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>' +
@@ -269,9 +290,10 @@ function ownerHtml({ name, email, items, notes, delivery, address, collect }) {
 
 /* ── Customer email ──────────────────────────────────────── */
 
-function custText({ name, items, delivery, address, collect }) {
+function custText({ name, phone, items, delivery, address, collect }) {
   const next = delivery
-    ? 'Your order will ship to: ' + (address || 'address to be confirmed')
+    ? 'Your order will ship to: ' + (address || 'address to be confirmed') +
+      (phone ? '\nWe\'ll reach you on: ' + phone : '')
     : 'You chose to collect from ' + collect + ', Cape Town. I\'ll confirm the time over email.';
   return [
     'Hi ' + name + '!',
@@ -293,8 +315,9 @@ function custText({ name, items, delivery, address, collect }) {
   ].join('\n');
 }
 
-function custHtml({ name, items, delivery, address, collect }) {
+function custHtml({ name, phone, items, delivery, address, collect }) {
   /* Escape everything user-supplied before it touches HTML */
+  const phoneText = esc(phone);
   name    = esc(name);
   address = esc(address).replace(/\n/g, '<br>');
   collect = esc(collect);
@@ -304,7 +327,9 @@ function custHtml({ name, items, delivery, address, collect }) {
   ).join('');
 
   const fulfilRow = delivery
-    ? row('Shipping to', address || '<em>To be confirmed</em>')
+    ? row('Shipping to', address || '<em>To be confirmed</em>') +
+      (phoneText ? row('Contact number', phoneText +
+        '<br><span style="font-size:.8rem;color:#a08070;font-style:italic;">Reply to this email if that is not right</span>') : '')
     : row('Collecting from', '<strong>' + collect + '</strong>, Cape Town<br><span style="font-size:.82rem;color:#a08070;font-style:italic;">Time confirmed over email</span>');
 
   const note = delivery

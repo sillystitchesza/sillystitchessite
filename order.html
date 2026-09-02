@@ -149,6 +149,7 @@
                       <option value="Large Dark Blue Floral Make-up Bag">Large Dark Blue Floral Make-up Bag — R250.00</option>
                       <option value="Large Dark Green Floral Make-up Bag">Large Dark Green Floral Make-up Bag — R250.00</option>
                       <option value="Large White and Blue Floral Make-up Bag">Large White and Blue Floral Make-up Bag — R250.00</option>
+                      <option value="Large Red Make-up Bag">Large Red Make-up Bag — R250.00</option>
                       <option value="Medium Baby Blue Floral Make-up Bag">Medium Baby Blue Floral Make-up Bag — R185.00</option>
                       <option value="Medium Pink Floral Make-up Bag">Medium Pink Floral Make-up Bag — R185.00</option>
                       <option value="Medium White Floral Make-up Bag">Medium White Floral Make-up Bag — R185.00</option>
@@ -215,6 +216,15 @@
                 </label>
                 <textarea id="address" name="address" class="form-textarea"
                   placeholder="Street address, suburb, city, postal code…"></textarea>
+
+                <!-- Required only for delivery. script.js toggles `required`
+                     along with this block, so collection orders skip it. -->
+                <label class="form-label" for="phone" style="margin-top:18px;">
+                  Contact Number <span class="required-star">✦</span>
+                </label>
+                <input type="tel" id="phone" name="phone" class="form-input"
+                  placeholder="e.g. 082 123 4567" inputmode="tel" autocomplete="tel" />
+                <p class="form-hint">The courier needs this to arrange your delivery.</p>
               </div>
 
               <!-- Collection options (shown by default, hidden when checkbox ticked) -->

@@ -74,9 +74,18 @@
   function showDelivery(on) {
     if (addressGroup)   addressGroup.style.display   = on ? 'block' : 'none';
     if (collectionOpts) collectionOpts.style.display = on ? 'none'  : 'block';
-    /* Address is only required when delivering */
+    /* Address and contact number are only required when delivering */
     const addressField = document.getElementById('address');
     if (addressField) addressField.required = on;
+    const phoneField = document.getElementById('phone');
+    if (phoneField) phoneField.required = on;
+  }
+
+  /* Digits only, 9–15 of them. Accepts 082 123 4567, +27 82 123 4567,
+     (021) 555-1234 — anything a South African would reasonably type. */
+  function validPhone(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    return d.length >= 9 && d.length <= 15;
   }
 
   if (deliveryCheck) {
@@ -243,6 +252,7 @@
       const bad =
         !val ||
         (field.type === 'email'  && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) ||
+        (field.type === 'tel'    && !validPhone(val)) ||
         (field.type === 'number' && !field.checkValidity()); // catches min/max/step
       if (bad) markInvalid(field);
     });
@@ -673,4 +683,167 @@ function _warnMissing(src, product) {
   });
 
   setTimeout(() => { updatePreview(); updateTotal(); }, 0);
+}());
+
+
+/* ============================================================
+   10. CUSTOMER REVIEWS — infinite scrolling bar (home page)
+   ────────────────────────────────────────────────────────────
+   Reads window.SILLY_STITCHES_REVIEWS from reviews.js and
+   builds the moving track. Works with any number of reviews:
+   the set is cloned until it is wider than the screen, and the
+   animation duration is derived from the distance so the speed
+   stays the same whether there are 2 reviews or 200.
+   ============================================================ */
+(function () {
+  const marquee = document.getElementById('reviewMarquee');
+  if (!marquee) return;                       // not the home page
+  const section = document.getElementById('reviews');
+
+  const raw  = window.SILLY_STITCHES_REVIEWS;
+  const list = Array.isArray(raw)
+    ? raw.filter(r => r && String(r.text || '').trim())
+    : [];
+
+  /* No reviews yet — remove the whole section so the page has no empty band. */
+  if (!list.length) { if (section) section.remove(); return; }
+
+  if (window.SILLY_STITCHES_REVIEWS_ARE_PLACEHOLDERS) {
+    console.warn('[Silly Stitches] The reviews bar is showing PLACEHOLDER reviews. ' +
+                 'Replace them with real ones in reviews.js, then set ' +
+                 'SILLY_STITCHES_REVIEWS_ARE_PLACEHOLDERS to false.');
+  }
+
+  const PX_PER_SEC = 55;                      // scroll speed — tweak to taste
+
+  /* Newest first, so a review added anywhere in the list surfaces correctly. */
+  const sorted = list.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+
+  /* '2026-07-18' -> '18 July 2026'. Anything else is shown exactly as typed. */
+  function niceDate(v) {
+    const s = String(v == null ? '' : v).trim();
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+    if (!m) return s;
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return s;
+    return d + ' ' + MONTHS[mo - 1] + ' ' + y;
+  }
+
+  /* Always draws five ⭐ — the earned ones in colour, the rest greyed out,
+     so a 4-star review reads as 4 out of 5 at a glance.
+     A review with NO `stars` field shows no stars at all: "not rated" is
+     not the same claim as "rated zero". */
+  function starsHTML(n) {
+    if (n === undefined || n === null || n === '') return '';
+    const c = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+    let out = '';
+    for (let i = 0; i < 5; i++) {
+      out += '<span class="review-star' + (i < c ? '' : ' is-empty') + '">⭐</span>';
+    }
+    return '<p class="review-stars" role="img" aria-label="' + c + ' out of 5 stars">' +
+           out + '</p>';
+  }
+
+  function cardHTML(r) {
+    return '<article class="review-card">' +
+      starsHTML(r.stars) +
+      (String(r.product || '').trim()
+        ? '<span class="review-product">' + esc(r.product) + '</span>' : '') +
+      '<p class="review-text">' + esc(r.text) + '</p>' +
+      '<div class="review-meta">' +
+        '<span class="review-name">' + esc(String(r.name || '').trim() || 'A happy customer') + '</span>' +
+        (niceDate(r.date) ? '<span class="review-date">' + esc(niceDate(r.date)) + '</span>' : '') +
+      '</div>' +
+    '</article>';
+  }
+
+  const setHTML = sorted.map(cardHTML).join('');
+
+  const track = document.createElement('div');
+  track.className = 'review-track';
+  track.innerHTML = setHTML;
+  marquee.appendChild(track);
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* ── Decide, on every layout, whether this bar needs to move at all.
+        If the reviews already fit across the screen there is nothing to
+        scroll — they sit still and centred. Repeating a short list would
+        just look like a stutter. Only once they overflow do we clone the
+        set and animate, cloning until the track comfortably overflows and
+        measuring exactly how far one set travels (gaps included) so the
+        loop is invisible.
+
+        Re-run on resize, on a reduced-motion change, and once webfonts
+        have settled, since all three change what fits. ───────────────── */
+  function layout() {
+    track.querySelectorAll('[data-clone]').forEach(el => el.remove());
+    marquee.classList.remove('is-static');
+    track.style.removeProperty('--rm-shift');
+    track.style.removeProperty('--rm-duration');
+
+    const per  = sorted.length;
+    const one  = track.scrollWidth;                      // one set, no trailing gap
+    const view = marquee.clientWidth;
+    if (!one || !view) return;
+
+    /* They all fit — hold still, centred, no clones. */
+    if (one <= view) { marquee.classList.add('is-static'); return; }
+
+    /* Overflowing, but this visitor asked for no animation: leave it as a
+       swipeable strip (the CSS handles the overflow) rather than moving it. */
+    if (reduceMotion.matches) return;
+
+    const need   = Math.max(2, Math.ceil((view * 2) / one) + 1);
+    const frag   = document.createDocumentFragment();
+    for (let c = 1; c < need; c++) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = setHTML;
+      while (wrap.firstElementChild) {
+        const el = wrap.firstElementChild;
+        el.setAttribute('data-clone', '1');
+        el.setAttribute('aria-hidden', 'true');
+        frag.appendChild(el);
+      }
+    }
+    track.appendChild(frag);
+
+    /* Distance from the 1st card to the 1st card of the next copy — this is
+       the shift that makes copy 2 land exactly where copy 1 started. */
+    const cards = track.children;
+    const shift = cards.length > per
+      ? cards[per].offsetLeft - cards[0].offsetLeft
+      : one;
+
+    track.style.setProperty('--rm-shift', shift + 'px');
+    track.style.setProperty('--rm-duration', Math.max(8, shift / PX_PER_SEC) + 's');
+  }
+
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout).catch(() => {});
+
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 200); });
+  if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', layout);
+
+  /* Tap to pause on touch devices (hover already covers desktop). */
+  marquee.addEventListener('touchstart', () => marquee.classList.add('is-paused'),  { passive: true });
+  marquee.addEventListener('touchend',   () => marquee.classList.remove('is-paused'), { passive: true });
+
+  /* Don't animate while the bar is scrolled out of view. */
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(
+      es => es.forEach(e => marquee.classList.toggle('is-paused', !e.isIntersecting)),
+      { threshold: 0 }
+    ).observe(marquee);
+  }
 }());

@@ -162,7 +162,7 @@
             />
           </div>
           <div class="product-info">
-            <h2 class="product-name">Large Baby Blue Floral Make-up Bag</h2>
+            <h2 class="product-name"><strong>Large</strong> Baby Blue Floral Make-up Bag</h2>
             <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around. Loved by people (and bees) everywhere!</p>
             <div class="product-footer">
               <span class="product-price">R250.00</span>
@@ -207,7 +207,7 @@
             />
           </div>
           <div class="product-info">
-            <h2 class="product-name">Large Pink Floral Make-up Bag</h2>
+            <h2 class="product-name"><strong>Large</strong> Pink Floral Make-up Bag</h2>
             <p class="product-desc">Perfect for make-up, or just bits-and-bobs lying around. Fabric designed, woven and printed in South Africa!</p>
             <div class="product-footer">
               <span class="product-price">R250.00</span>
@@ -223,6 +223,29 @@
       </div>
 
     </div>
+  </section>
+
+
+  <!-- ============================
+       CUSTOMER REVIEWS
+       ─────────────────────────────
+       Content lives in reviews.js — add or edit reviews there,
+       never here. script.js builds the scrolling track inside
+       #reviewMarquee. If reviews.js has no reviews, this whole
+       section removes itself.
+       ============================ -->
+  <section class="section reviews" id="reviews" aria-labelledby="reviews-title">
+    <div class="container">
+
+      <div class="section-header reveal">
+        <h2 class="section-title" id="reviews-title">&#10022; Kind Words &#10022;</h2>
+        <p class="section-subtitle">What customers have said about their pieces</p>
+      </div>
+
+    </div>
+
+    <!-- Full-width so the cards can scroll past the container edges -->
+    <div class="review-marquee" id="reviewMarquee" role="region" aria-label="Customer reviews"></div>
   </section>
 
 
@@ -314,6 +337,7 @@
   </footer>
 
   <script src="products.js"></script>
+  <script src="reviews.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
