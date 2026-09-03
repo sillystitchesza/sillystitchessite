@@ -46,7 +46,7 @@ window.SILLY_STITCHES_REVIEWS = [
   {
     name:    'Nadine',
     date:    '2026-07-18',
-    product: 'Baguette Bag',
+    product: 'Make-up Bag',
     stars:   5,
     text:    'Even prettier in person. The stitching is so neat and it fits all of my makeup!',
   },
