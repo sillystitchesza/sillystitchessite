@@ -2028,14 +2028,26 @@ h1, h2, h3, h4 {
   flex: 1 1 auto;   /* pushes the name/date row to the bottom of every card */
 }
 
-.review-text::before {
-  content: '\201C';
+/* Opening and closing curly quotes around the review itself. Both are
+   generated content sitting directly against the text with no space, so
+   the closing quote can never wrap onto a line of its own. */
+.review-text::before,
+.review-text::after {
   font-family: var(--font-display);
   font-size: 1.6rem;
   line-height: 0;
   color: var(--pink-mid);
-  margin-right: 3px;
   vertical-align: -0.28em;
+}
+
+.review-text::before {
+  content: '\201C';
+  margin-right: 3px;
+}
+
+.review-text::after {
+  content: '\201D';
+  margin-left: 2px;
 }
 
 .review-meta {
